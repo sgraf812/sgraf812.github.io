@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<!--
+    Massively by HTML5 UP
+    html5up.net | @ajlkn
+    Hakyll integration by Sebastian Graf
+    Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <title>fixpt - Hakyll Code Highlighting Themes</title>
+
+    <link rel="apple-touch-icon" sizes="180x180" href="../assets/icon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="../assets/icon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../assets/icon/favicon-16x16.png">
+    <link rel="manifest" href="../assets/icon/manifest.json">
+    <link rel="mask-icon" href="../assets/icon/safari-pinned-tab.svg" color="#5bbad5">
+    <link rel="shortcut icon" href="../assets/icon/favicon.ico">
+    <meta name="msapplication-config" content="/assets/icon/browserconfig.xml">
+    <meta name="theme-color" content="#ffffff">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="../assets/css/main.css" />
+    <link rel="stylesheet" href="../assets/css/pygments.css" />
+    <noscript>
+        <link rel="stylesheet" href="../assets/css/noscript.css" />
+    </noscript>
+</head>
+
+<body>
+    <div id="wrapper" class="bg">
+        <header id="header">
+            <a href="../" class="logo">fixpt</a>
+        </header>
+
+        <nav id="nav">
+            <ul class="links">
+                <li class=" active ">
+                    <a href="../">Blog</a>
+                </li>
+                <li class>
+                    <a href="../about.html">About</a>
+                </li>
+            </ul>
+
+            <ul class="icons">
+                <li>
+                    <a href="https://reddit.com/user/sgraf812" class="icon fa-reddit" rel="nofollow">
+                        <span class="label">Reddit</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="https://github.com/sgraf812" class="icon fa-github" rel="nofollow">
+                        <span class="label">GitHub</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="https://twitter.com/sgraf1337" class="icon fa-twitter" rel="nofollow">
+                        <span class="label">Twitter</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <div id="main">
+            <section class="post">
+  <header class="major">
+    <span class="date">December  3, 2017</span>
+    <h1>Hakyll Code Highlighting Themes</h1>
+  </header>
+  <p>As <a href="https://jaspervdj.be/hakyll/tutorials/faq.html#does-hakyll-support-syntax-highlighting"><code>Hakyll</code>s FAQ</a> points out, in order to have source code highlighting for your blog, you need appropriate CSS markup. It would be convenient if one could choose from the wealth of themes out there, but the existing pygments styles don’t seem to work any longer.</p>
+<!--more-->
+<p>That’s probably because <a href="https://hackage.haskell.org/package/pandoc"><code>pandoc</code></a> has since deprecated <a href="https://hackage.haskell.org/package/highlighting-kate"><code>highlighting-kate</code></a> in favor of <a href="https://hackage.haskell.org/package/skylighting"><code>skylighting</code></a>, which adopts a different CSS naming convention, thus invalidating all prior CSS themes.</p>
+<p><code>skylighting</code> has an console app for highlighting code, but it doesn’t seem to be able to just dump CSS files for its rich style database. Fortunately, we can just pick from one of the <a href="https://hackage.haskell.org/package/skylighting-0.4.4.1/docs/Skylighting-Styles.html">pre-defined styles</a> and generate the CSS with a GHCi two-liner:</p>
+<div class="sourceCode"><pre class="sourceCode css"><code class="sourceCode css">$ stack --resolver=nightly-2017-12-01 --install-ghc install skylighting
+<span class="fl">...</span>
+$ stack --resolver=nightly-2017-12-01 ghci
+<span class="fl">...</span>
+Prelude&gt; import Skylighting
+Prelude Skylighting&gt; writeFile <span class="st">&quot;zenburn.css&quot;</span> $ styleToCss zenburn
+Prelude Skylighting&gt; ^D
+$ cat zenburn<span class="fl">.css</span>
+div<span class="fl">.sourceLine</span>, a<span class="fl">.sourceLine</span> <span class="kw">{</span> <span class="kw">display:</span> <span class="dt">inline-block</span><span class="kw">;</span> <span class="kw">min-height:</span> <span class="dt">1.25em</span><span class="kw">;</span> <span class="kw">}</span>
+a<span class="fl">.sourceLine</span> <span class="kw">{</span> <span class="kw">pointer-events:</span> <span class="dt">none</span><span class="kw">;</span> <span class="kw">color:</span> <span class="dt">inherit</span><span class="kw">;</span> <span class="kw">text-decoration:</span> <span class="dt">inherit</span><span class="kw">;</span> <span class="kw">}</span>
+<span class="fl">.sourceCode</span> <span class="kw">{</span> <span class="kw">overflow:</span> <span class="dt">visible</span><span class="kw">;</span> <span class="kw">}</span>
+code<span class="fl">.sourceCode</span> <span class="kw">{</span> <span class="kw">white-space:</span> <span class="dt">pre</span><span class="kw">;</span> <span class="kw">}</span>
+<span class="dv">@media</span> <span class="dv">print {</span>
+code<span class="fl">.sourceCode</span> <span class="kw">{</span> <span class="kw">white-space:</span> <span class="dt">pre-wrap</span><span class="kw">;</span> <span class="kw">}</span>
+div<span class="fl">.sourceLine</span>, a<span class="fl">.sourceLine</span> <span class="kw">{</span> <span class="kw">text-indent:</span> <span class="dt">-1em</span><span class="kw">;</span> <span class="kw">padding-left:</span> <span class="dt">1em</span><span class="kw">;</span> <span class="kw">}</span>
+<span class="dv">}</span>
+pre<span class="fl">.numberSource</span> div<span class="fl">.sourceLine</span>, <span class="fl">.numberSource</span> a<span class="fl">.sourceLine</span>
+  <span class="kw">{</span> <span class="kw">position:</span> <span class="dt">relative</span><span class="kw">;</span> <span class="kw">}</span>
+<span class="fl">...</span></code></pre></div>
+<p>With a little more effort, you could probably access <code>skylighting</code>s whole style database, but I’m currently satisfied with the style I installed.</p>
+</section>
+        </div>
+
+        <footer id="footer">
+            <section>
+                <form method="POST" action="https://formspree.io/sgraf1337@gmail.com">
+                    <div class="field">
+                        <label for="name">Name</label>
+                        <input type="text" name="name" id="name" />
+                    </div>
+                    <div class="field">
+                        <label for="email">Email</label>
+                        <input type="text" name="email" id="email" />
+                    </div>
+                    <div class="field">
+                        <label for="message">Message</label>
+                        <textarea name="message" id="message" rows="3"></textarea>
+                    </div>
+                    <ul class="actions">
+                        <li>
+                            <input type="submit" value="Send Message" />
+                        </li>
+                    </ul>
+                </form>
+            </section>
+            <section class="split contact">
+                <section>
+                    <h3>E-mail</h3>
+                    <p>
+                        <a href="mailto:sgraf1337@gmail.com">sgraf1337@gmail.com</a>
+                    </p>
+                </section>
+                <section>
+                    <h3>Social</h3>
+                    <ul class="icons alt">
+                        <li>
+                            <a href="https://reddit.com/user/sgraf812" class="icon fa-reddit" rel="nofollow">
+                                <span class="label">Reddit</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://github.com/sgraf812" class="icon fa-github" rel="nofollow">
+                                <span class="label">GitHub</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://twitter.com/sgraf1337" class="icon fa-twitter" rel="nofollow">
+                                <span class="label">Twitter</span>
+                            </a>
+                        </li>
+                    </ul>
+                </section>
+            </section>
+        </footer>
+        <!-- Copyright -->
+        <div id="copyright">
+            <ul>
+                <li>&copy; HTML5 UP</li>
+                <li>Design by
+                    <a href="https://html5up.net">HTML5 UP</a>
+                </li>
+                <li>Adapted from the Jekyll integration by
+                    <a href="https://somiibo.com">Somiibo</a>
+                </li>
+                <li>Powered by
+                    <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+                </li>
+                </li>
+            </ul>
+        </div>
+    </div>
+</body>
+
+</html>

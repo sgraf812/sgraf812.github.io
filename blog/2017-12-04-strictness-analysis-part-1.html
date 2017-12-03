@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<!--
+    Massively by HTML5 UP
+    html5up.net | @ajlkn
+    Hakyll integration by Sebastian Graf
+    Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <title>fixpt - All About Strictness Analysis (part 1)</title>
+
+    <link rel="apple-touch-icon" sizes="180x180" href="../assets/icon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="../assets/icon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../assets/icon/favicon-16x16.png">
+    <link rel="manifest" href="../assets/icon/manifest.json">
+    <link rel="mask-icon" href="../assets/icon/safari-pinned-tab.svg" color="#5bbad5">
+    <link rel="shortcut icon" href="../assets/icon/favicon.ico">
+    <meta name="msapplication-config" content="/assets/icon/browserconfig.xml">
+    <meta name="theme-color" content="#ffffff">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="../assets/css/main.css" />
+    <link rel="stylesheet" href="../assets/css/pygments.css" />
+    <noscript>
+        <link rel="stylesheet" href="../assets/css/noscript.css" />
+    </noscript>
+</head>
+
+<body>
+    <div id="wrapper" class="bg">
+        <header id="header">
+            <a href="../" class="logo">fixpt</a>
+        </header>
+
+        <nav id="nav">
+            <ul class="links">
+                <li class=" active ">
+                    <a href="../">Blog</a>
+                </li>
+                <li class>
+                    <a href="../about.html">About</a>
+                </li>
+            </ul>
+
+            <ul class="icons">
+                <li>
+                    <a href="https://reddit.com/user/sgraf812" class="icon fa-reddit" rel="nofollow">
+                        <span class="label">Reddit</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="https://github.com/sgraf812" class="icon fa-github" rel="nofollow">
+                        <span class="label">GitHub</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="https://twitter.com/sgraf1337" class="icon fa-twitter" rel="nofollow">
+                        <span class="label">Twitter</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <div id="main">
+            <section class="post">
+  <header class="major">
+    <span class="date">December  4, 2017</span>
+    <h1>All About Strictness Analysis (part 1)</h1>
+  </header>
+  <p>Non-strict languages like Haskell often require the programmer to reason about strictness to achieve good performance. A while ago, Michael Snoyman wrote a <a href="https://www.fpcomplete.com/blog/2017/09/all-about-strictness">blog post</a> about this, giving an introduction on the matter as well as an overview over the tools at our disposal.</p>
+<p>In this post, I want to offer another, more surgical approach to plugging space leaks that works hand in hand with optimizations carried out by the compiler. <!--more--></p>
+<h2 id="the-setting">The Setting</h2>
+<p>Michael Snoyman fixed problems due to laziness by making ample use of strictness annotations. This is the right approach when you run into space leaks in debug builds. It’s also good practice for library writers, where you cannot anticipate usage patterns, so the least you could do is force strict parameters as early as possible.</p>
+<p>Running example in Snoyman’s blog post were variants of the following program computing the average of a list of <code>Int</code>egers:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">RunningTotal</span> <span class="fu">=</span> <span class="dt">RunningTotal</span>
+  {<span class="ot"> sum   ::</span> <span class="dt">Int</span>
+  ,<span class="ot"> count ::</span> <span class="dt">Int</span>
+  }
+
+<span class="ot">printAverage ::</span> <span class="dt">RunningTotal</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
+printAverage (<span class="dt">RunningTotal</span> sum count)
+  <span class="fu">|</span> count <span class="fu">==</span> <span class="dv">0</span> <span class="fu">=</span> error <span class="st">&quot;Need at least one value!&quot;</span>
+  <span class="fu">|</span> otherwise <span class="fu">=</span> print (fromIntegral sum <span class="fu">/</span> fromIntegral<span class="ot"> count ::</span> <span class="dt">Double</span>)
+
+<span class="ot">printListAverage ::</span> [<span class="dt">Int</span>] <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
+printListAverage <span class="fu">=</span> go (<span class="dt">RunningTotal</span> <span class="dv">0</span> <span class="dv">0</span>)
+  <span class="kw">where</span>
+    go rt [] <span class="fu">=</span> printAverage rt
+    go (<span class="dt">RunningTotal</span> sum count) (x<span class="fu">:</span>xs) <span class="fu">=</span>
+      go (<span class="dt">RunningTotal</span> (sum <span class="fu">+</span> x) (count <span class="fu">+</span> <span class="dv">1</span>)) xs
+
+<span class="ot">main ::</span> <span class="dt">IO</span> ()
+main <span class="fu">=</span> printListAverage [<span class="dv">1</span><span class="fu">..</span><span class="dv">1000000</span>]</code></pre></div>
+<p>In absence of any optimization, this is quite hungry for memory:</p>
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">$ <span class="ex">stack</span> --resolver=nightly-2017-12-01 ghc -- -O0 average.hs <span class="kw">&amp;&amp;</span> <span class="ex">./average</span> +RTS -s
+<span class="ex">500000.5</span>
+     <span class="ex">258</span>,650,856 bytes allocated in the heap
+     <span class="ex">348</span>,098,952 bytes copied during GC
+      <span class="ex">74</span>,388,992 bytes maximum residency (9 sample(s))
+         <span class="ex">599</span>,832 bytes maximum slop
+             <span class="ex">179</span> MB total memory in use (0 MB lost due to fragmentation)</code></pre></div>
+<p>Significant numbers are roughly 250MB in allocations over the course of execution, as well as a maximum working set of 74MB. I’m currently on stackage <code>nightly-2017-12-01</code> (GHC 8.2.2) on a Windows box, which might explain differences in measurement.</p>
+<p>The post goes on to annotate the accumulating parameter of <code>go</code> with bang patterns:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE BangPatterns #-}</span>
+
+<span class="kw">data</span> <span class="dt">RunningTotal</span> <span class="fu">=</span> <span class="dt">RunningTotal</span>
+  {<span class="ot"> sum   ::</span> <span class="dt">Int</span>
+  ,<span class="ot"> count ::</span> <span class="dt">Int</span>
+  }
+
+<span class="ot">printAverage ::</span> <span class="dt">RunningTotal</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
+printAverage (<span class="dt">RunningTotal</span> sum count)
+  <span class="fu">|</span> count <span class="fu">==</span> <span class="dv">0</span> <span class="fu">=</span> error <span class="st">&quot;Need at least one value!&quot;</span>
+  <span class="fu">|</span> otherwise <span class="fu">=</span> print (fromIntegral sum <span class="fu">/</span> fromIntegral<span class="ot"> count ::</span> <span class="dt">Double</span>)
+
+<span class="ot">printListAverage ::</span> [<span class="dt">Int</span>] <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
+printListAverage <span class="fu">=</span> go (<span class="dt">RunningTotal</span> <span class="dv">0</span> <span class="dv">0</span>)
+  <span class="kw">where</span>
+    go rt [] <span class="fu">=</span> printAverage rt
+    go (<span class="dt">RunningTotal</span> <span class="fu">!</span>sum <span class="fu">!</span>count) (x<span class="fu">:</span>xs) <span class="fu">=</span> <span class="co">-- only this line changed</span>
+      go (<span class="dt">RunningTotal</span> (sum <span class="fu">+</span> x) (count <span class="fu">+</span> <span class="dv">1</span>)) xs
+
+<span class="ot">main ::</span> <span class="dt">IO</span> ()
+main <span class="fu">=</span> printListAverage [<span class="dv">1</span><span class="fu">..</span><span class="dv">1000000</span>]</code></pre></div>
+<p>This has a great effect on maximum residency:</p>
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">$ <span class="ex">stack</span> --resolver=nightly-2017-12-01 ghc -- -O0 average.hs <span class="kw">&amp;&amp;</span> <span class="ex">./average</span> +RTS -s
+<span class="ex">500000.5</span>
+     <span class="ex">192</span>,099,048 bytes allocated in the heap
+         <span class="ex">245</span>,416 bytes copied during GC
+          <span class="ex">42</span>,856 bytes maximum residency (2 sample(s))
+          <span class="ex">30</span>,872 bytes maximum slop
+               <span class="ex">2</span> MB total memory in use (0 MB lost due to fragmentation)
+<span class="ex">...</span>
+<span class="ex">INIT</span>    time    0.000s  (  0.000s elapsed)
+<span class="ex">MUT</span>     time    0.031s  (  0.029s elapsed)
+<span class="ex">GC</span>      time    0.000s  (  0.001s elapsed)
+<span class="ex">EXIT</span>    time    0.000s  (  0.000s elapsed)
+<span class="ex">Total</span>   time    0.031s  (  0.030s elapsed)</code></pre></div>
+<p>The program now executes in constant residency, which, in the presence of garbage collection, guarantees constant space usage! Nonetheless, we still produce a lot of garbage (190MB) and need 30ms to arrive at that result.</p>
+<h2 id="optimizations">Optimizations</h2>
+<p>Compare that to what happens when we compile with optimizations on:</p>
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">$ <span class="ex">stack</span> --resolver=nightly-2017-12-01 ghc -- -O2 average.hs <span class="kw">&amp;&amp;</span> <span class="ex">./average</span> +RTS -s
+<span class="ex">500000.5</span>
+     <span class="ex">128</span>,098,744 bytes allocated in the heap
+          <span class="ex">13</span>,800 bytes copied during GC
+          <span class="ex">42</span>,856 bytes maximum residency (1 sample(s))
+          <span class="ex">30</span>,872 bytes maximum slop
+               <span class="ex">2</span> MB total memory in use (0 MB lost due to fragmentation)
+<span class="ex">...</span>
+<span class="ex">INIT</span>    time    0.000s  (  0.000s elapsed)
+<span class="ex">MUT</span>     time    0.016s  (  0.014s elapsed)
+<span class="ex">GC</span>      time    0.000s  (  0.000s elapsed)
+<span class="ex">EXIT</span>    time    0.000s  (  0.000s elapsed)
+<span class="ex">Total</span>   time    0.016s  (  0.015s elapsed)</code></pre></div>
+<p>Optimizations chipped off a huge amount of total allocations and also cut execution time in half.</p>
+<p>How can we improve on this? By deleting the two bangs we inserted earlier (simply for dramatic effect) and placing one in the pattern of <code>printAverage</code> instead:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE BangPatterns #-}</span>
+
+<span class="kw">data</span> <span class="dt">RunningTotal</span> <span class="fu">=</span> <span class="dt">RunningTotal</span>
+  {<span class="ot"> sum   ::</span> <span class="dt">Int</span>
+  ,<span class="ot"> count ::</span> <span class="dt">Int</span>
+  }
+
+<span class="ot">printAverage ::</span> <span class="dt">RunningTotal</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
+printAverage (<span class="dt">RunningTotal</span> <span class="fu">!</span>sum count) <span class="co">-- New bang here</span>
+  <span class="fu">|</span> count <span class="fu">==</span> <span class="dv">0</span> <span class="fu">=</span> error <span class="st">&quot;Need at least one value!&quot;</span>
+  <span class="fu">|</span> otherwise <span class="fu">=</span> print (fromIntegral sum <span class="fu">/</span> fromIntegral<span class="ot"> count ::</span> <span class="dt">Double</span>)
+
+<span class="ot">printListAverage ::</span> [<span class="dt">Int</span>] <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
+printListAverage <span class="fu">=</span> go (<span class="dt">RunningTotal</span> <span class="dv">0</span> <span class="dv">0</span>)
+  <span class="kw">where</span>
+    go rt [] <span class="fu">=</span> printAverage rt
+    go (<span class="dt">RunningTotal</span> sum count) (x<span class="fu">:</span>xs) <span class="fu">=</span> <span class="co">-- No more bangs here</span>
+      go (<span class="dt">RunningTotal</span> (sum <span class="fu">+</span> x) (count <span class="fu">+</span> <span class="dv">1</span>)) xs
+
+<span class="ot">main ::</span> <span class="dt">IO</span> ()
+main <span class="fu">=</span> printListAverage [<span class="dv">1</span><span class="fu">..</span><span class="dv">1000000</span>]</code></pre></div>
+<p>Compile and execute this in old fashion with optimizations on:</p>
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">$ <span class="ex">stack</span> --resolver=nightly-2017-12-01 ghc -- -O2 average.hs <span class="kw">&amp;&amp;</span> <span class="ex">./average</span> +RTS -s
+<span class="ex">500000.5</span>
+      <span class="ex">80</span>,098,744 bytes allocated in the heap
+           <span class="ex">5</span>,864 bytes copied during GC
+          <span class="ex">42</span>,856 bytes maximum residency (1 sample(s))
+          <span class="ex">30</span>,872 bytes maximum slop
+               <span class="ex">2</span> MB total memory in use (0 MB lost due to fragmentation)
+<span class="ex">...</span>
+<span class="ex">INIT</span>    time    0.000s  (  0.000s elapsed)
+<span class="ex">MUT</span>     time    0.000s  (  0.009s elapsed)
+<span class="ex">GC</span>      time    0.000s  (  0.000s elapsed)
+<span class="ex">EXIT</span>    time    0.000s  (  0.000s elapsed)
+<span class="ex">Total</span>   time    0.000s  (  0.009s elapsed)</code></pre></div>
+<p>Another huge chunk of allocations is gone and execution time reduced by at least 30% again! What just happened?</p>
+<h2 id="the-compiler-can-reason-about-strictness">The compiler can reason about strictness</h2>
+<p>The strictness analysis of GHC (which is integrated in its <a href="https://ghc.haskell.org/trac/ghc/wiki/Commentary/Compiler/Demand">Demand Analyzer</a>, a behemoth that interleaves three different analyses) is quite capable. Without any intervention it would have recognized that the recursive <code>go</code> is strict not only in the <code>RunningTotal</code> constructor, but also in its <code>count</code> field. Perhaps surprisingly, it would find the <code>sum</code> field <em>not</em> to be evaluated strictly. That’s due to a subtlety in the definition of <code>printAverage</code>: Note that in the <code>count == 0</code> error case that <code>sum</code> isn’t evaluated at all! So the bang makes sense there after all.</p>
+<p>What I found quite essential to pin down the cause of this performance regression is a combination of looking at the GHC Core output as well as reproduce what strictness analysis found out. Let’s start with a crash course on a simple strictness analysis similar to GHC’s.</p>
+<p>In order to be scalable, GHC summarizes each function by a <em>demand signature</em> (consult the <a href="https://ghc.haskell.org/trac/ghc/wiki/Commentary/Compiler/Demand">GHC wiki page</a> for details), part of which relates how a single call evaluates its arguments and free variables. The signature for <code>printAverage</code> for example looks like <code>&lt;S(LS(S)),_&gt;</code> (we elide usage demands, suggested by the <code>_</code> wildcard), which reads as: When <code>printAverage</code> is called with one argument, it will evaluate that argument strictly (the <code>RunningTotal</code> box), as well as unpack the boxed <code>Int</code> in its second field (<code>count</code>) strictly, while being <code>L</code>azy in the first field (<code>sum</code>).</p>
+<p>It’s not hard to see how to arrive at that signature: We (and the compiler) assume a call with one argument (ignoring intricacies regarding <code>IO</code>), and see that the first branch is lazy in <code>sum</code>, while the second is strict in both. Prior to that, the <code>RunningTotal</code> is unpacked (evaluated!) and <code>count</code> is compared to 0, which also entails unpacking the <code>Int</code> constructor to get at the unboxed <code>Int#</code>. Combined, <code>RunningTotal</code>s <code>count</code> field is put under strictness <code>S(S)</code> (the unpacked <code>Int#</code> in the box is evaluated strictly), while <code>sum</code> is put under strictness <code>L</code>, resulting in said strictness demand of <code>S(LS(S))</code> on the <code>RunningTotal</code> argument.</p>
+<p>Non-recursive functions are trivial to analyze and are inlined most of the time anyway. What about a recursive function, such as <code>go</code>? Let’s see what GHC found out by dumping the module’s Core IR after the strictness analyzer has been run with <code>-ddump-stranal</code> (simplified):</p>
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">$ <span class="ex">stack</span> --resolver=nightly-2017-12-01 ghc -- -O2 average.hs -ddump-stranal -fforce-recomp
+[<span class="ex">1</span> of 1] Compiling Main             ( average.hs, average.o )
+
+==================== <span class="ex">Demand</span> analysis ====================
+<span class="ex">...</span>
+<span class="ex">go</span> :: RunningTotal -<span class="op">&gt;</span> [Int] -<span class="op">&gt;</span> IO ()
+[<span class="ex">...</span>
+ <span class="va">Arity=</span>2,
+ <span class="va">Str=</span><span class="op">&lt;</span><span class="ex">S</span>(LS(S)),<span class="ex">1*U</span>(1*U(U),<span class="ex">1*U</span>(U))<span class="op">&gt;&lt;</span><span class="ex">S</span>,1*U<span class="op">&gt;</span>,
+ <span class="ex">...</span>]
+<span class="ex">go</span>
+  = <span class="ex">\ </span>(rt :: RunningTotal)
+      <span class="kw">(</span><span class="ex">xs</span> :: [Int]<span class="kw">)</span> <span class="ex">-</span><span class="op">&gt;</span>
+      <span class="kw">case</span> xs of
+        [] -&gt; -- inlining of <span class="kw">`</span><span class="ex">printAverage</span> rt<span class="kw">`</span>
+        : x xs -&gt;
+          case rt of
+            RunningTotal sum count -&gt;
+              go
+                (Main.RunningTotal
+                  (GHC.Num.<span class="va">$fNumInt_$c</span>+ sum x)
+                  (case count of
+                    GHC.Types.I# count# -&gt;
+                      GHC.Types.I# (GHC.Prim.+# count# 1#)))
+                xs
+...
+==================== Demand analysis ====================
+...</code></pre></div>
+<p>Note that there are multiple runs of the demand analyzer, but we’ll focus on the first run for now, before any of the strictness information was exploited by transformations downstream.</p>
+<p>Crucial is the demand signature assigned to <code>go</code>, which is available as the <code>Str</code> attribute (usage demands elided again): <code>&lt;S(LS(S)),_&gt;&lt;S,_&gt;</code>. This is just as expected. The first <code>RunningTotal</code> argument is unpacked all the time (in the <code>[]</code> case, that’s done by <code>printAverage</code>), but its <code>sum</code> field is only evaluated lazily because the error case in <code>printAverage</code> isn’t strict in it, so by induction, <code>go</code> is neither. The second argument is the list of integers to average, which we immediately match on, so naturally its outer constructor is used strictly.</p>
+<p>It’s one thing for humans to reason like this, but how do we teach this to a compiler? The key here is inductive reasoning: Under the assumption that <code>go</code> has the above demand signature to be unleashed at recursive call sites, we can indeed verify <code>go</code> has this signature.</p>
+<p>For that, the compiler initially assumes the most <em>optimistic</em> demand signature possible for <code>go</code>, which corresponds to <code>&lt;S(S(S)S(S)),_&gt;&lt;S,_&gt;</code><sup id="a1"><a href="#f1">1</a></sup>, the demand a <code>deepseq</code> would put on the arguments. Assuming this for the recursive case, we can see that the newly constructed <code>RunningTotal (sum + x) (count + 1)</code> is <code>deepseq</code>ed immediately, which translates into a strictness of <code>S(S)</code> on both fields of the <code>RunningTotal</code> argument.</p>
+<p>In the base case, however, the call to <code>printAverage</code> causes the <code>count</code> field to only be evaluated lazily. That’s enough for the whole case match to be lazy in <code>count</code>, so the computed strictness signature is <code>&lt;S(LS(S)),_&gt;&lt;S,_&gt;</code>. Now the compiler has to reiterate analysis of <code>go</code>, because the assumed signature was too optimistic. Fortunately, under the assumption of <code>&lt;S(LS(S)),_&gt;&lt;S,_&gt;</code> for the recursive call, we arrive at exactly the same signature. Analysis has reached a <em>fixed-point</em> in its endeavour to find a conservative approximation for the strictness properties of <code>go</code> at runtime.</p>
+<h2 id="all-boxes-must-go">All boxes must go</h2>
+<p>Having a basic understanding of how strictness analysis works, we see that <code>printAverage</code> is the reason why <code>sum</code> isn’t unboxed. As soon as we add the bang in the relevant position, as I foreshadowed above, we arrive at the following, simplified Core output:</p>
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">$ <span class="ex">stack</span> --resolver=nightly-2017-12-01 ghc -- -O2 average.hs -ddump-simpl -fforce-recomp
+<span class="ex">...</span>
+<span class="ex">Main.main_</span><span class="va">$s$wgo</span>
+  :: [<span class="ex">Int</span>] -<span class="op">&gt;</span> GHC.Prim.Int# -<span class="op">&gt;</span> GHC.Prim.Int# -<span class="op">&gt;</span> IO ()
+[<span class="ex">GblId</span>, Arity=3, Str=<span class="op">&lt;</span>S,1*U<span class="op">&gt;&lt;</span>S,U<span class="op">&gt;&lt;</span>L,U<span class="op">&gt;</span>]
+<span class="ex">Main.main_</span><span class="va">$s$wgo</span>
+  = <span class="ex">\ </span>(xs :: [Int])
+      <span class="kw">(</span><span class="ex">count</span> :: GHC.Prim.Int#<span class="kw">)</span>
+      <span class="kw">(</span><span class="fu">sum</span> :: GHC.Prim.Int#<span class="kw">)</span> <span class="ex">-</span><span class="op">&gt;</span>
+      <span class="kw">case</span> xs of
+        [] -&gt;
+          case count of
+            0# -&gt; lvl2_r4lk -- error <span class="st">&quot;...&quot;</span>
+            _ -&gt;
+              (GHC.IO.Handle.Text.hPutStr2
+                 GHC.IO.Handle.FD.stdout
+                 (case GHC.Prim./##
+                         (GHC.Prim.int2Double# sum) (GHC.Prim.int2Double# wild1_X1r)
+                  of
+                    _ -&gt;
+                      GHC.Float.<span class="va">$w$sshowSignedFloat</span>
+                        GHC.Float.<span class="va">$fShowDouble2</span>
+                        GHC.Float.minExpt
+                        wild4_a3Qb
+                        (GHC.Types.[] @ Char))
+                 GHC.Types.True)
+        : x xs -&gt;
+          <span class="va">$wgo_r4ll</span>
+            (case x of
+              GHC.Types.I# y -&gt;
+                GHC.Types.I# (GHC.Prim.+# sum y))
+            (GHC.Prim.+# count 1#)
+            xs
+...</code></pre></div>
+<p>Note that the <code>RunningTotal</code> box is completely gone. That’s due to GHC optimizing away repeated boxing and unboxing in its <a href="http://www.cs.nott.ac.uk/~pszgmh/wrapper-extended.pdf">worker/wrapper transformation</a>, which is the pass that profits most significantly from strictness information. Without strictness analysis, no unboxing happens, even if you annotate bindings with bangs or activate <code>-XStrict</code>.</p>
+<p>All 80MB of remaining allocation (we measured this above) are due to the list of integers. We can do better by recognizing the fold pattern and make use of <code>foldl</code> (that’s right, the lazy one!):</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE BangPatterns #-}</span>
+
+<span class="kw">data</span> <span class="dt">RunningTotal</span> <span class="fu">=</span> <span class="dt">RunningTotal</span>
+  {<span class="ot"> sum   ::</span> <span class="dt">Int</span>
+  ,<span class="ot"> count ::</span> <span class="dt">Int</span>
+  }
+
+<span class="ot">printAverage ::</span> <span class="dt">RunningTotal</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
+printAverage (<span class="dt">RunningTotal</span> <span class="fu">!</span>sum count)
+  <span class="fu">|</span> count <span class="fu">==</span> <span class="dv">0</span> <span class="fu">=</span> error <span class="st">&quot;Need at least one value!&quot;</span>
+  <span class="fu">|</span> otherwise <span class="fu">=</span> print (fromIntegral sum <span class="fu">/</span> fromIntegral<span class="ot"> count ::</span> <span class="dt">Double</span>)
+
+<span class="ot">printListAverage ::</span> [<span class="dt">Int</span>] <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
+printListAverage <span class="fu">=</span> printAverage <span class="fu">.</span> foldl f (<span class="dt">RunningTotal</span> <span class="dv">0</span> <span class="dv">0</span>)
+  <span class="kw">where</span>
+    f (<span class="dt">RunningTotal</span> sum count) x <span class="fu">=</span> <span class="dt">RunningTotal</span> (sum <span class="fu">+</span> x) (count <span class="fu">+</span> <span class="dv">1</span>)
+
+<span class="ot">main ::</span> <span class="dt">IO</span> ()
+main <span class="fu">=</span> printListAverage [<span class="dv">1</span><span class="fu">..</span><span class="dv">1000000</span>]</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">$ <span class="ex">stack</span> --resolver=nightly-2017-12-01 ghc -- -O2 average.hs <span class="kw">&amp;&amp;</span> <span class="ex">./average</span> +RTS -s
+<span class="ex">500000.5</span>
+          <span class="ex">98</span>,784 bytes allocated in the heap
+           <span class="ex">1</span>,752 bytes copied during GC
+          <span class="ex">42</span>,856 bytes maximum residency (1 sample(s))
+          <span class="ex">26</span>,776 bytes maximum slop
+               <span class="ex">2</span> MB total memory in use (0 MB lost due to fragmentation)
+<span class="ex">...</span>
+<span class="ex">INIT</span>    time    0.000s  (  0.000s elapsed)
+<span class="ex">MUT</span>     time    0.000s  (  0.002s elapsed)
+<span class="ex">GC</span>      time    0.000s  (  0.000s elapsed)
+<span class="ex">EXIT</span>    time    0.000s  (  0.000s elapsed)
+<span class="ex">Total</span>   time    0.000s  (  0.003s elapsed)</code></pre></div>
+<p>That’s only 3ms (from 9ms earlier), and allocations have completely vanished! Let’s look at the Core output:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">Main.main_<span class="fu">$</span>s<span class="fu">$</span>wgo [<span class="dt">Occ</span><span class="fu">=</span><span class="dt">LoopBreaker</span>]
+<span class="ot">  ::</span> <span class="dt">GHC.Prim.Int</span><span class="fu">#</span> <span class="ot">-&gt;</span> <span class="dt">GHC.Prim.Int</span><span class="fu">#</span> <span class="ot">-&gt;</span> <span class="dt">GHC.Prim.Int</span><span class="fu">#</span> <span class="ot">-&gt;</span> <span class="dt">RunningTotal</span>
+[<span class="dt">GblId</span>, <span class="dt">Arity</span><span class="fu">=</span><span class="dv">3</span>, <span class="dt">Caf</span><span class="fu">=</span><span class="dt">NoCafRefs</span>, <span class="dt">Str</span><span class="fu">=&lt;</span><span class="dt">L</span>,<span class="dt">U</span><span class="fu">&gt;&lt;</span><span class="dt">L</span>,<span class="dt">U</span><span class="fu">&gt;&lt;</span><span class="dt">S</span>,<span class="dv">1</span><span class="fu">*</span><span class="dt">U</span><span class="fu">&gt;</span>m]
+Main.main_<span class="fu">$</span>s<span class="fu">$</span>wgo
+  <span class="fu">=</span> \ (<span class="ot">sc_s4sk ::</span> <span class="dt">GHC.Prim.Int</span><span class="fu">#</span>)
+      (<span class="ot">sc1_s4sj ::</span> <span class="dt">GHC.Prim.Int</span><span class="fu">#</span>)
+      (<span class="ot">sc2_s4si ::</span> <span class="dt">GHC.Prim.Int</span><span class="fu">#</span>) <span class="ot">-&gt;</span>
+      <span class="kw">case</span> sc2_s4si <span class="kw">of</span> wild_X1h {
+        __DEFAULT <span class="ot">-&gt;</span>
+          Main.main_<span class="fu">$</span>s<span class="fu">$</span>wgo
+            (<span class="fu">GHC.Prim.+#</span> sc_s4sk <span class="dv">1</span><span class="fu">#</span>)
+            (<span class="fu">GHC.Prim.+#</span> sc1_s4sj wild_X1h)
+            (<span class="fu">GHC.Prim.+#</span> wild_X1h <span class="dv">1</span><span class="fu">#</span>);
+        <span class="dv">1000000</span><span class="fu">#</span> <span class="ot">-&gt;</span>
+          <span class="dt">Main.RunningTotal</span>
+            (<span class="dt">GHC.Types.I</span><span class="fu">#</span> (<span class="fu">GHC.Prim.+#</span> sc1_s4sj <span class="dv">1000000</span><span class="fu">#</span>))
+            (<span class="dt">GHC.Types.I</span><span class="fu">#</span> (<span class="fu">GHC.Prim.+#</span> sc_s4sk <span class="dv">1</span><span class="fu">#</span>))
+      }</code></pre></div>
+<p>Amazing! No boxing happening at all. That should be enough to reach C level performance, given a good compiler backend. The takeaway is that using <code>foldl</code> is great as long as list fusion kicks in.</p>
+<h2 id="summary">Summary</h2>
+<p>This post tried to demonstrate how to debug strictness in the face of compiler optimizations to achieve minimal time and space footprints. For that, we re-enacted how the compiler analyzes strictness properties of functions, to eventually pin down the subtle culprit in <code>printAverage</code>. This kind of debugging is only possible through having a rough idea of strictness analysis and reading relevant GHC Core fragments and as such only makes sense with optimizations activated.</p>
+<p>Of course, library writers have good reason to sprinkle bang patterns more liberally: They need to guarantee that the maximum residency stays as low as possible for snappy <code>-O0</code> performance. That’s what experimentally placing bang patterns at accumulators is good for: Keeping the maximum residency at a minimum, so that time spent on GC is as low as possible. It’s <em>not</em> good for teaching GHC what to unbox (e.g. reducing total allocations by more than a constant factor), as that doesn’t happen anyway at <code>-O0</code>. And as soon as optimizations kick in, strictness analysis is mostly smart enough to figure things out by itself.</p>
+<p>Finally, some links for further reading:</p>
+<ul>
+<li><a href="http://blog.ezyang.com/2011/05/anatomy-of-a-thunk-leak/">Edward Yang: Anatomy of a thunk leak (2011)</a></li>
+<li><a href="https://donsbot.wordpress.com/2008/05/06/write-haskell-as-fast-as-c-exploiting-strictness-laziness-and-recursion/">Don Steart: Write Haskell as fast as C (2008)</a></li>
+<li><a href="https://wiki.haskell.org/Performance/Strictness#Strictness_analysis">Haskell Wiki on Strictness (Analysis)</a></li>
+</ul>
+<p><b id="f1">1</b> That’s actually a bit simplified, as the real signature is <code>&lt;B,_&gt;&lt;B,_&gt;</code>, where <code>B</code> denotes a <em>hyperstrict</em> demand as explained on <a href="https://ghc.haskell.org/trac/ghc/wiki/Commentary/Compiler/Demand">the wiki page</a>. <a href="#a1">↩</a></p>
+</section>
+        </div>
+
+        <footer id="footer">
+            <section>
+                <form method="POST" action="https://formspree.io/sgraf1337@gmail.com">
+                    <div class="field">
+                        <label for="name">Name</label>
+                        <input type="text" name="name" id="name" />
+                    </div>
+                    <div class="field">
+                        <label for="email">Email</label>
+                        <input type="text" name="email" id="email" />
+                    </div>
+                    <div class="field">
+                        <label for="message">Message</label>
+                        <textarea name="message" id="message" rows="3"></textarea>
+                    </div>
+                    <ul class="actions">
+                        <li>
+                            <input type="submit" value="Send Message" />
+                        </li>
+                    </ul>
+                </form>
+            </section>
+            <section class="split contact">
+                <section>
+                    <h3>E-mail</h3>
+                    <p>
+                        <a href="mailto:sgraf1337@gmail.com">sgraf1337@gmail.com</a>
+                    </p>
+                </section>
+                <section>
+                    <h3>Social</h3>
+                    <ul class="icons alt">
+                        <li>
+                            <a href="https://reddit.com/user/sgraf812" class="icon fa-reddit" rel="nofollow">
+                                <span class="label">Reddit</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://github.com/sgraf812" class="icon fa-github" rel="nofollow">
+                                <span class="label">GitHub</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://twitter.com/sgraf1337" class="icon fa-twitter" rel="nofollow">
+                                <span class="label">Twitter</span>
+                            </a>
+                        </li>
+                    </ul>
+                </section>
+            </section>
+        </footer>
+        <!-- Copyright -->
+        <div id="copyright">
+            <ul>
+                <li>&copy; HTML5 UP</li>
+                <li>Design by
+                    <a href="https://html5up.net">HTML5 UP</a>
+                </li>
+                <li>Adapted from the Jekyll integration by
+                    <a href="https://somiibo.com">Somiibo</a>
+                </li>
+                <li>Powered by
+                    <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+                </li>
+                </li>
+            </ul>
+        </div>
+    </div>
+</body>
+
+</html>
