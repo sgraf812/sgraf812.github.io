@@ -13,22 +13,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
 
-    <title>fixpt - About</title>
+    <title>fixpt - $title$</title>
 
-    <link rel="apple-touch-icon" sizes="180x180" href="./assets/icon/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="./assets/icon/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="./assets/icon/favicon-16x16.png">
-    <link rel="manifest" href="./assets/icon/manifest.json">
-    <link rel="mask-icon" href="./assets/icon/safari-pinned-tab.svg" color="#5bbad5">
-    <link rel="shortcut icon" href="./assets/icon/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/icon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/icon/favicon-16x16.png">
+    <link rel="manifest" href="/assets/icon/manifest.json">
+    <link rel="mask-icon" href="/assets/icon/safari-pinned-tab.svg" color="#5bbad5">
+    <link rel="shortcut icon" href="/assets/icon/favicon.ico">
     <meta name="msapplication-config" content="/assets/icon/browserconfig.xml">
     <meta name="theme-color" content="#ffffff">
 
     <!-- CSS -->
-    <link rel="stylesheet" href="./assets/css/main.css" />
-    <link rel="stylesheet" href="./assets/css/pygments.css" />
+    <link rel="stylesheet" href="/assets/css/main.css" />
+    <link rel="stylesheet" href="/assets/css/pygments.css" />
     <noscript>
-        <link rel="stylesheet" href="./assets/css/noscript.css" />
+        <link rel="stylesheet" href="/assets/css/noscript.css" />
     </noscript>
 </head>
 
@@ -40,27 +40,27 @@
 
         <nav id="nav">
             <ul class="links">
-                <li class>
-                    <a href="./">Blog</a>
+                <li class="$if(blog-active)$active$endif$">
+                    <a href="/">Blog</a>
                 </li>
-                <li class=" active ">
-                    <a href="./about.html">About</a>
+                <li class="$if(about-active)$active$endif$">
+                    <a href="/about.html">About</a>
                 </li>
             </ul>
 
             <ul class="icons">
                 <li>
-                    <a href="https://reddit.com/user/sgraf812" class="icon fa-reddit" rel="nofollow">
+                    <a href="https://reddit.com/user/$reddit$" class="icon fa-reddit" rel="nofollow">
                         <span class="label">Reddit</span>
                     </a>
                 </li>
                 <li>
-                    <a href="https://github.com/sgraf812" class="icon fa-github" rel="nofollow">
+                    <a href="https://github.com/$github$" class="icon fa-github" rel="nofollow">
                         <span class="label">GitHub</span>
                     </a>
                 </li>
                 <li>
-                    <a href="https://twitter.com/sgraf1337" class="icon fa-twitter" rel="nofollow">
+                    <a href="https://twitter.com/$twitter$" class="icon fa-twitter" rel="nofollow">
                         <span class="label">Twitter</span>
                     </a>
                 </li>
@@ -68,13 +68,12 @@
         </nav>
 
         <div id="main">
-            <p>Hey, I’m Sebastian Graf, soon-to-be research assistant at Karlsruhe Institute of Technology. When I’m not learning about the implementation and the semantics of programming languages, I’m probably having a great time with my trumpet and fellow musicians in one of the many orchestras I’m part of.</p>
-<p>You can contact me with the form below or find me on one of the social networks listed in the top and bottom bar.</p>
+            $body$
         </div>
 
         <footer id="footer">
             <section>
-                <form method="POST" action="https://formspree.io/sgraf1337@gmail.com">
+                <form method="POST" action="https://formspree.io/$email$">
                     <div class="field">
                         <label for="name">Name</label>
                         <input type="text" name="name" id="name" />
@@ -98,24 +97,24 @@
                 <section>
                     <h3>E-mail</h3>
                     <p>
-                        <a href="mailto:sgraf1337@gmail.com">sgraf1337@gmail.com</a>
+                        <a href="mailto:$email$">$email$</a>
                     </p>
                 </section>
                 <section>
                     <h3>Social</h3>
                     <ul class="icons alt">
                         <li>
-                            <a href="https://reddit.com/user/sgraf812" class="icon fa-reddit" rel="nofollow">
+                            <a href="https://reddit.com/user/$reddit$" class="icon fa-reddit" rel="nofollow">
                                 <span class="label">Reddit</span>
                             </a>
                         </li>
                         <li>
-                            <a href="https://github.com/sgraf812" class="icon fa-github" rel="nofollow">
+                            <a href="https://github.com/$github$" class="icon fa-github" rel="nofollow">
                                 <span class="label">GitHub</span>
                             </a>
                         </li>
                         <li>
-                            <a href="https://twitter.com/sgraf1337" class="icon fa-twitter" rel="nofollow">
+                            <a href="https://twitter.com/$twitter$" class="icon fa-twitter" rel="nofollow">
                                 <span class="label">Twitter</span>
                             </a>
                         </li>
