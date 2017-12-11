@@ -294,7 +294,7 @@ Note that the `RunningTotal` box is completely gone.
 That’s due to GHC optimizing away repeated boxing and unboxing in its [worker/wrapper transformation](http://www.cs.nott.ac.uk/~pszgmh/wrapper-extended.pdf), which is the pass that profits most significantly from strictness information. Without strictness analysis, no unboxing happens, even if you annotate bindings with bangs or activate `-XStrict`.
 
 All 80MB of remaining allocation (we measured this above) are due to the list of integers.
-We can do better by recognizing the fold pattern in `go` and make use of `foldl` (that’s right, the lazy one!), which takes part in list fusion since GHC 7.10:
+We can do better by recognizing the fold pattern in `go` and make use of `foldl` (that’s right, it even works with the lazy one!), which takes part in list fusion since GHC 7.10:
 
 ```haskell
 {-# LANGUAGE BangPatterns #-}
@@ -359,7 +359,7 @@ Main.main_$s$wgo
 
 Amazing! No boxing happening at all.
 That should be enough to reach C level performance, given a good compiler backend.
-The takeaway is that using `foldl` is great as long as list fusion kicks in.
+The takeaway is that using `foldl` is great as long as list fusion kicks in, but better err on the safe side and use the strict `foldl'` when we expect strictness anyway.
 
 ## Summary
 This post tried to demonstrate how to debug strictness in the face of compiler optimizations to achieve minimal time and space footprints.
