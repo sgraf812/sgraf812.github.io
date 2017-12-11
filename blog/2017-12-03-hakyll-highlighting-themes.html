@@ -35,12 +35,12 @@
 <body>
     <div id="wrapper" class="bg">
         <header id="header">
-            <a href="../" class="logo">fixpt</a>
+            <a href="./" class="logo">fixpt</a>
         </header>
 
         <nav id="nav">
             <ul class="links">
-                <li class=" active ">
+                <li class="active">
                     <a href="../">Blog</a>
                 </li>
                 <li class>
@@ -76,7 +76,7 @@
   <p>As <a href="https://jaspervdj.be/hakyll/tutorials/faq.html#does-hakyll-support-syntax-highlighting"><code>Hakyll</code>s FAQ</a> points out, in order to have source code highlighting for your blog, you need appropriate CSS markup. It would be convenient if one could choose from the wealth of themes out there, but the existing pygments styles don’t seem to work any longer.</p>
 <!--more-->
 <p>That’s probably because <a href="https://hackage.haskell.org/package/pandoc"><code>pandoc</code></a> has since deprecated <a href="https://hackage.haskell.org/package/highlighting-kate"><code>highlighting-kate</code></a> in favor of <a href="https://hackage.haskell.org/package/skylighting"><code>skylighting</code></a>, which adopts a different CSS naming convention, thus invalidating all prior CSS themes.</p>
-<p><code>skylighting</code> has an console app for highlighting code, but it doesn’t seem to be able to just dump CSS files for its rich style database. Fortunately, we can just pick from one of the <a href="https://hackage.haskell.org/package/skylighting-0.4.4.1/docs/Skylighting-Styles.html">pre-defined styles</a> and generate the CSS with a GHCi two-liner:</p>
+<p><code>skylighting</code> has a console app for highlighting code, but it doesn’t seem to be able to just dump CSS files for its rich style database. Fortunately, we can just pick from one of the <a href="https://hackage.haskell.org/package/skylighting-0.4.4.1/docs/Skylighting-Styles.html">pre-defined styles</a> and generate the CSS with a GHCi two-liner:</p>
 <div class="sourceCode"><pre class="sourceCode css"><code class="sourceCode css">$ stack --resolver=nightly-2017-12-01 --install-ghc install skylighting
 <span class="fl">...</span>
 $ stack --resolver=nightly-2017-12-01 ghci
@@ -98,6 +98,27 @@ pre<span class="fl">.numberSource</span> div<span class="fl">.sourceLine</span>,
 <span class="fl">...</span></code></pre></div>
 <p>With a little more effort, you could probably access <code>skylighting</code>s whole style database, but I’m currently satisfied with the style I installed.</p>
 </section>
+<div id="disqus_thread"></div>
+<script>
+  /**
+  *  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+  *  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+  /*
+  var disqus_config = function () {
+  this.page.url = fixpt.de/blog/2017-12-03-hakyll-highlighting-themes.html;  // Replace PAGE_URL with your page's canonical URL variable
+  this.page.identifier = /blog/2017-12-03-hakyll-highlighting-themes.html; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+  };
+  */
+  (function () { // DON'T EDIT BELOW THIS LINE
+    var d = document, s = d.createElement('script');
+    s.src = 'https://fixpt.disqus.com/embed.js';
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+</script>
+<noscript>Please enable JavaScript to view the
+  <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+</noscript>
         </div>
 
         <footer id="footer">
