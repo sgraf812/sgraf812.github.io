@@ -373,7 +373,7 @@ Keeping the maximum residency at a minimum, so that time spent on GC is as low a
 It’s *not* good for teaching GHC what to unbox (e.g. reducing total allocations by more than a constant factor), as that doesn’t happen anyway at `-O0`.
 And as soon as optimizations kick in, strictness analysis is mostly smart enough to figure things out by itself.
 
-The next part of this series will implement a strictness analysis with the help of [`datafix`](https://hackage.haskell.org/package/datafix), a new library of mine for writing static analyses.
+The next part of this series will implement a strictness analysis with the help of [`datafix`](https://github.com/sgraf812/datafix), a new library of mine for writing static analyses.
 
 Finally, some links for further reading:
 
