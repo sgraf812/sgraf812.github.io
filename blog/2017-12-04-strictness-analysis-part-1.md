@@ -174,9 +174,13 @@ Another huge chunk of allocations is gone and execution time reduced by at least
 The strictness analysis of GHC (which is integrated in its [Demand Analyzer](https://ghc.haskell.org/trac/ghc/wiki/Commentary/Compiler/Demand), a behemoth that interleaves three different analyses) is quite capable.
 Without any intervention it would have recognized that the recursive `go` is strict not only in the `RunningTotal` constructor, but also in its `count` field.
 Perhaps surprisingly, it would find the `sum` field *not* to be evaluated strictly.
+
 That’s due to a subtlety in the definition of `printAverage`:
 Note that in the `count == 0` error case that `sum` isn’t evaluated at all!
-So the bang makes sense there after all.
+And indeed, `printAverage (RunningTotal undefined 0)` will print the expected error message instead of crashing due to `undefined`, which is the very definition of being lazy in `sum`.
+This extends to a call like `go (RunningTotal undefined 0) []`, so GHC can't just unbox the `sum` field even if the recursive case of `go` is annotated.
+So placing a bang in `printAverage` makes sense after all: 
+There isn't much utility in allowing calls like `printAverage (RunningTotal undefined 0)`.
 
 What I found quite essential to pin down the cause of this performance regression is a combination of looking at the GHC Core output as well as reproduce what strictness analysis found out.
 Let’s start with a crash course on a simple strictness analysis similar to GHC’s.
@@ -290,7 +294,7 @@ Note that the `RunningTotal` box is completely gone.
 That’s due to GHC optimizing away repeated boxing and unboxing in its [worker/wrapper transformation](http://www.cs.nott.ac.uk/~pszgmh/wrapper-extended.pdf), which is the pass that profits most significantly from strictness information. Without strictness analysis, no unboxing happens, even if you annotate bindings with bangs or activate `-XStrict`.
 
 All 80MB of remaining allocation (we measured this above) are due to the list of integers.
-We can do better by recognizing the fold pattern and make use of `foldl` (that’s right, the lazy one!):
+We can do better by recognizing the fold pattern in `go` and make use of `foldl` (that’s right, the lazy one!), which takes part in list fusion since GHC 7.10:
 
 ```haskell
 {-# LANGUAGE BangPatterns #-}
@@ -368,6 +372,8 @@ That’s what experimentally placing bang patterns at accumulators is good for:
 Keeping the maximum residency at a minimum, so that time spent on GC is as low as possible.
 It’s *not* good for teaching GHC what to unbox (e.g. reducing total allocations by more than a constant factor), as that doesn’t happen anyway at `-O0`.
 And as soon as optimizations kick in, strictness analysis is mostly smart enough to figure things out by itself.
+
+The next part of this series will implement a strictness analysis with the help of [`datafix`](https://hackage.haskell.org/package/datafix), a new library of mine for writing static analyses.
 
 Finally, some links for further reading:
 
