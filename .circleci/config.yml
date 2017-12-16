@@ -1,0 +1,46 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: arekczarnik/docker-circleci-haskell/
+    branches:
+      only:
+        - hakyll
+    steps: |
+      checkout
+      restore_cache:
+        key: deps1-{{ checksum "blog.cabal" }}-{{ checksum "stack.yaml" }}
+      git submodule init
+      git submodule update
+      cd _site/ && git checkout master && cd ..
+      stack install --fast
+      save_cache:
+        key: deps1-{{ checksum "blog.cabal" }}-{{ checksum "stack.yaml" }}
+        paths:
+          ~/.stack
+          ./.stack-work
+      stack exec blog -- build
+
+  deploy:
+    steps: |
+      git add --all
+      git commit -m "[`date '+%F %T %Z'`] New release"
+      git push origin master:master
+  
+  
+      
+machine:
+  ghc:
+    8.0.2
+  
+dependencies:
+  override:
+    - stack build --dependencies-only
+test:
+  override:
+    - stack install
+  post:
+    - git submodule init
+    - git submodule update
+    - cd _site/ && git checkout master && cd ..
+    - stack exec blog -- build
