@@ -378,7 +378,7 @@ The next part of this series will implement a strictness analysis with the help 
 Finally, some links for further reading:
 
 - [Edward Yang: Anatomy of a thunk leak (2011)](http://blog.ezyang.com/2011/05/anatomy-of-a-thunk-leak/)
-- [Don Steart: Write Haskell as fast as C (2008)](https://donsbot.wordpress.com/2008/05/06/write-haskell-as-fast-as-c-exploiting-strictness-laziness-and-recursion/)
+- [Don Stewart: Write Haskell as fast as C (2008)](https://donsbot.wordpress.com/2008/05/06/write-haskell-as-fast-as-c-exploiting-strictness-laziness-and-recursion/)
 - [Haskell Wiki on Strictness (Analysis)](https://wiki.haskell.org/Performance/Strictness#Strictness_analysis)
 
 <b id="f1">1</b> That’s actually a bit simplified, as the real signature is `<B,_><B,_>`, where `B` denotes a *hyperstrict* demand as explained on [the wiki page](https://ghc.haskell.org/trac/ghc/wiki/Commentary/Compiler/Demand). <a href="#a1">↩</a>
