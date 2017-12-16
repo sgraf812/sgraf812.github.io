@@ -24,7 +24,7 @@ jobs:
   deploy:
     steps: |
       git add --all
-      git commit -m "[`date '+%F %T %Z'`] New release"
+      git commit -m "[$(date '+%F %T %Z')] New release"
       git push origin master:master
   
   
