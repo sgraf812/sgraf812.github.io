@@ -27,12 +27,15 @@ jobs:
       stack exec site rebuild
       cp -r .circleci/ _site/
       cp .gitignore _site/
+      commit=$(git rev-parse HEAD)
       git checkout master
       git pull --rebase
       # Overwrite existing files with new files
       cp -a _site/. .
       #  Commit
       git add --all
-      git commit -m "[`date '+%F %T %Z'`] New release"
+      git commit -m "[$(date '+%F %T %Z')] New release
+      
+      In response to commit ${commit}"
       # Push
       git push origin master:master
