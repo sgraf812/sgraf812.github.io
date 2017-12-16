@@ -24,9 +24,16 @@ jobs:
             stack exec blog rebuild
             cp .gitignore _site/
             commit=$(git rev-parse HEAD)
+            echo In response to commit ${commit}
             git checkout master
+            echo checked out master
             git pull --rebase
+            echo pulled
             cp -a _site/. .
+            echo copied
             git add --all
+            echo added
             git commit -m "[$(date '+%F %T %Z')] New release in response to commit ${commit}"
+            echo committed
             git push origin master:master
+            echo pushed
