@@ -45,6 +45,10 @@ main :: IO ()
 main = do
     E.setLocaleEncoding E.utf8
     hakyll $ do
+        match "CNAME" $ do
+            route idRoute
+            compile copyFileCompiler
+
         match "images/*" $ do
             route   idRoute
             compile copyFileCompiler
