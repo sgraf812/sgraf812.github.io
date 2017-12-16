@@ -45,7 +45,7 @@ main :: IO ()
 main = do
     E.setLocaleEncoding E.utf8
     hakyll $ do
-        match "CNAME" $ do
+        match (fromList ["CNAME", ".circleci/config.yml"]) $ do
             route idRoute
             compile copyFileCompiler
 

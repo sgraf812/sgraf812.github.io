@@ -19,28 +19,18 @@ jobs:
         paths:
           ~/.stack
           ./.stack-work
-      stack exec blog -- build
 
   deploy:
     steps: |
+      git config --global user.email robots@circleci.com
+      git config --global user.name CircleCI
+      stack exec site rebuild
+      git checkout master
+      git pull --rebase
+      # Overwrite existing files with new files
+      cp -a _site/. .
+      #  Commit
       git add --all
-      git commit -m "[$(date '+%F %T %Z')] New release"
+      git commit -m "[`date '+%F %T %Z'`] New release"
+      # Push
       git push origin master:master
-  
-  
-      
-machine:
-  ghc:
-    8.0.2
-  
-dependencies:
-  override:
-    - stack build --dependencies-only
-test:
-  override:
-    - stack install
-  post:
-    - git submodule init
-    - git submodule update
-    - cd _site/ && git checkout master && cd ..
-    - stack exec blog -- build
