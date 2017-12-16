@@ -27,7 +27,7 @@ jobs:
             echo In response to commit ${commit}
             git checkout master
             echo checked out master
-            git pull --rebase
+            git pull
             echo pulled
             cp -a _site/. .
             echo copied
