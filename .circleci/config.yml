@@ -10,8 +10,6 @@ jobs:
       - checkout
       - restore_cache:
           key: deps1-{{ checksum "blog.cabal" }}-{{ checksum "stack.yaml" }}
-      - run: git submodule update --init
-      - run: cd _site/ && git checkout master && cd ..
       - run: stack install --fast
       - save_cache:
           key: deps1-{{ checksum "blog.cabal" }}-{{ checksum "stack.yaml" }}
