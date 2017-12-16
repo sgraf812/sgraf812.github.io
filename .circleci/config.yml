@@ -21,8 +21,7 @@ jobs:
           command: |
             git config --global user.email robots@circleci.com
             git config --global user.name CircleCI
-            stack exec site rebuild
-            cp -r .circleci/ _site/
+            stack exec blog rebuild
             cp .gitignore _site/
             commit=$(git rev-parse HEAD)
             git checkout master
