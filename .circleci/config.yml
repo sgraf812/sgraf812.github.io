@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: arekczarnik/docker-circleci-haskell:latest
+      - image: futtetennista/hakyll:4.9.8.0
     branches:
       only:
         - hakyll
@@ -24,16 +24,9 @@ jobs:
             stack exec blog rebuild
             cp .gitignore _site/
             commit=$(git rev-parse HEAD)
-            echo In response to commit ${commit}
             git checkout master
-            echo checked out master
-            git pull
-            echo pulled
+            git pull --rebase
             cp -a _site/. .
-            echo copied
             git add --all
-            echo added
             git commit -m "[$(date '+%F %T %Z')] New release in response to commit ${commit}"
-            echo committed
             git push origin master:master
-            echo pushed
