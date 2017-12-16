@@ -6,36 +6,32 @@ jobs:
     branches:
       only:
         - hakyll
-    steps: |
-      checkout
-      restore_cache:
-        key: deps1-{{ checksum "blog.cabal" }}-{{ checksum "stack.yaml" }}
-      git submodule init
-      git submodule update
-      cd _site/ && git checkout master && cd ..
-      stack install --fast
-      save_cache:
-        key: deps1-{{ checksum "blog.cabal" }}-{{ checksum "stack.yaml" }}
-        paths:
-          ~/.stack
-          ./.stack-work
-
+    steps:
+      - checkout
+      - restore_cache:
+          key: deps1-{{ checksum "blog.cabal" }}-{{ checksum "stack.yaml" }}
+      - git submodule init
+      - git submodule update
+      - cd _site/ && git checkout master && cd ..
+      - stack install --fast
+      - save_cache:
+          key: deps1-{{ checksum "blog.cabal" }}-{{ checksum "stack.yaml" }}
+          paths:
+            ~/.stack
+            ./.stack-work
   deploy:
-    steps: |
-      git config --global user.email robots@circleci.com
-      git config --global user.name CircleCI
-      stack exec site rebuild
-      cp -r .circleci/ _site/
-      cp .gitignore _site/
-      commit=$(git rev-parse HEAD)
-      git checkout master
-      git pull --rebase
-      # Overwrite existing files with new files
-      cp -a _site/. .
-      #  Commit
-      git add --all
-      git commit -m "[$(date '+%F %T %Z')] New release
+    steps:
+      - git config --global user.email robots@circleci.com
+      - git config --global user.name CircleCI
+      - stack exec site rebuild
+      - cp -r .circleci/ _site/
+      - cp .gitignore _site/
+      - commit=$(git rev-parse HEAD)
+      - git checkout master
+      - git pull --rebase
+      - cp -a _site/. .
+      - git add --all
+      - git commit -m "[$(date '+%F %T %Z')] New release
       
-      In response to commit ${commit}"
-      # Push
-      git push origin master:master
+In response to commit ${commit}"
+      - git push origin master:master
