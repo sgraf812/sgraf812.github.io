@@ -9,7 +9,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: deps 1-{{ checksum "blog.cabal" }}-{{ checksum "stack.yaml" }}
+          key: deps1-{{ checksum "blog.cabal" }}-{{ checksum "stack.yaml" }}
       - run: stack build --fast --no-terminal
       - save_cache:
           key: deps1-{{ checksum "blog.cabal" }}-{{ checksum "stack.yaml" }}
