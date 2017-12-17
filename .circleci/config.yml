@@ -9,7 +9,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: deps1-{{ checksum "blog.cabal" }}-{{ checksum "stack.yaml" }}
+          key: deps 1-{{ checksum "blog.cabal" }}-{{ checksum "stack.yaml" }}
       - run: stack build --fast --no-terminal
       - save_cache:
           key: deps1-{{ checksum "blog.cabal" }}-{{ checksum "stack.yaml" }}
@@ -24,8 +24,8 @@ jobs:
             stack exec blog rebuild
             cp .gitignore _site/
             commit=$(git rev-parse HEAD)
-            git checkout master
-            git pull --rebase
+            git fetch origin master
+            git checkout --track origin/master
             cp -a _site/. .
             git add --all
             git commit -m "[$(date '+%F %T %Z')] New release in response to commit ${commit}"
