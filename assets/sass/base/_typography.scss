@@ -33,7 +33,7 @@
 		line-height: 2.375;
 	}
 
-	a {
+	p a {
 		@include vendor('transition', (
 			'color #{_duration(transition)} ease-in-out',
 			'background-color #{_duration(transition)} ease-in-out',
@@ -140,7 +140,7 @@
 
 		code {
 			display: block;
-			line-height: 1.75;
+			line-height: 1.5;
 			padding: 1rem 1rem;
 			overflow-x: auto;
 		}
