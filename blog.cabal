@@ -20,3 +20,11 @@ executable blog
   build-depends:       base >= 4.7 && < 5,
                        hakyll,
                        hakyll-sass
+
+test-suite str-anal
+  type:                exitcode-stdio-1.0
+  main-is:             Main.hs
+  other-modules:       Strictness
+  build-depends:       base, markdown-unlit, containers, lattices
+  ghc-options:         -pgmL markdown-unlit
+  hs-source-dirs:      tests/StrAnal

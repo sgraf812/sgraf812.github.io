@@ -19,6 +19,9 @@ Since this is a literate Haskell file, we need to get the boring preamble out of
 module Strictness where
 
 import Algebra.Lattice
+import Control.Monad
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 ```
 
 # Syntax
@@ -40,6 +43,7 @@ type Name = String -- We assume names are unique!
 data Bind
   = NonRec (Name, Expr)
   | Rec [(Name, Expr)]
+  deriving (Eq, Show)
 ```
 
 Like in GHC, a program is just a list of top-level bindings. Also note that we
@@ -71,8 +75,8 @@ to analyse for? Yes, there is! We can still record if a variable was evaluated
 at all. There's `const`, for example:
 
 ```haskell
-const :: a -> b -> a
-const a b = a
+const_ :: a -> b -> a
+const_ a b = a
 ```
 
 `const` is strict in its first argument and lazy in its second. That's easy
@@ -166,6 +170,7 @@ data Strictness
   = Lazy        -- ^ Evaluated lazily (possibly not evaluated at all)
   | Strict Int  -- ^ Evaluated strictly (at least once), called with n args
   | HyperStrict -- ^ Fully evaluated, a call with maximum arity
+  deriving Eq
 
 instance Show Strictness where
   show Lazy = "L"
@@ -277,14 +282,7 @@ tracking the strictness demands on its free variables upon being
 put under a certain (i.e. head-strict) evaluation demand:
 
 ```haskell
-type StrEnv = Name -> Strictness
-
--- | Generalised, so that we can use it for more types than
--- just 'StrEnv'.
-extendEnv :: Eq a => a -> b -> a -> b
-extendEnv a b env a'
-  | a == a'   = b
-  | otherwise = env a'
+type StrEnv = Map Name Strictness
 ```
 
 Normally, we'd implement this as a `newtype`d `Map`, but here in
@@ -301,6 +299,11 @@ data ArgStr
   | TopArgStr
   | ConsArgStr Strictness ArgStr
   deriving Eq
+
+instance Show ArgStr where
+  show BottomArgStr = "B,B.."
+  show TopArgStr = "L,L.."
+  show (ConsArgStr s argStr) = show s ++ "," ++ show argStr
 
 instance JoinSemiLattice ArgStr where
   BottomArgStr \/ s = s
@@ -367,7 +370,7 @@ instance MeetSemiLattice StrType where
     StrType (fvs1 /\ fvs2) (args1 /\ args2)
 
 instance BoundedMeetSemiLattice StrType where
-top = StrType top top
+  top = StrType top top
 
 -- | This will be used instead of '(/\)' for sequential composition.
 -- It's right biased, meaning that it will return the
@@ -377,7 +380,7 @@ bothStrType (StrType fvs1 _) (StrType fvs2 args2) =
   StrType (fvs1 /\ fvs2) args2
   
 unitStrType :: Name -> Strictness -> StrType
-unitStrType n s = StrType (extendEnv n s top) top
+unitStrType n s = StrType (Map.insert n s top) top
 
 overArgs :: (ArgStr -> (a, ArgStr)) -> StrType -> (a, StrType)
 overArgs f ty =
@@ -390,10 +393,8 @@ arguments. A last ingredient is an environment that will carry
 strictness signatures for functions we analysed before:
 
 ```haskell
-type SigEnv = Name -> Maybe (Arity, StrType) -- Defn. of Arity follows
-
-emptySigEnv :: SigEnv
-emptySigEnv = const Nothing
+type Arity = Int
+type SigEnv = Map Name (Arity, StrType)
 ```
 
 Any strictness signature is only valid when a certain number of arguments
@@ -406,7 +407,7 @@ top-level lambdas in the RHS of the function's definition.
 
 ```haskell
 -- | Counts the number of top-level lambdas.
-manifestArity :: Expr -> Int
+manifestArity :: Expr -> Arity
 manifestArity (Lam _ e) = 1 + manifestArity e
 manifestArity _ = 0
 ```
@@ -428,7 +429,7 @@ variables under if put under head-demand:
 ```haskell
 analyse = expr emptySigEnv 0
 
-expr :: SigEnv -> Int -> Expr -> StrType
+expr :: SigEnv -> Arity -> Expr -> StrType
 expr sigs incomingArity = \case
   If b t e ->
     expr sigs 0 b `bothStrType`
@@ -493,9 +494,9 @@ puts its free variable `f` under strictness `Strict 1`, so when we abstract over
 ```haskell
   Var n ->
     let sig = fromMaybe top $ do
-      (arity, sig) <- sigs n of
-      guard (arity <= incomingArity)
-      pure sig
+          (arity, sig) <- sigs n
+          guard (arity <= incomingArity)
+          pure sig
     in bothStrType (unitStrType n (Strict incomingArity)) sig
 ```
 
@@ -555,10 +556,10 @@ signatures for the binding group. Let's see what else hides in `fixBinds`:
 fixBinds :: SigEnv -> [(Name, Expr)] -> SigEnv
 fixBinds sigs binds = toSigEnv stableTypes sigs
   where
-    toSigEnv :: [(Int, StrType)] -> SigEnv -> SigEnv
+    toSigEnv :: [(Arity, StrType)] -> SigEnv -> SigEnv
     toSigEnv = foldr (\((n, _), ty) sigs -> extendEnv n ty) sigs . zip binds
 
-    fromSigEnv :: SigEnv -> [(Int, StrType)]
+    fromSigEnv :: SigEnv -> [(Arity, StrType)]
     fromSigEnv sigs = map (sigs . fst) binds
 ```
 
@@ -569,13 +570,13 @@ adding them to the incoming `SigEnv`, which contains strictness signatures
 for outer bindings.
 
 ```haskell
-    stableTypes :: [(Int, StrType)]
+    stableTypes :: [(Arity, StrType)]
     stableTypes = head . filter (uncurry (==)) $ zip approximations (tail approximations)
 
-    start :: [(Int, StrType)]
+    start :: [(Arity, StrType)]
     start = map (const (0, bottom)) binds
 
-    approximations :: [[(Int, StrType)]]
+    approximations :: [[(Arity, StrType)]]
     approximations = iterate iter start
 ```
 
