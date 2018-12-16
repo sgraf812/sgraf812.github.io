@@ -13,7 +13,12 @@ analysis à la GHC with you, so enjoy!
 Since this is a literate Haskell file, we need to get the boring preamble out of the way.
 
 ```haskell
-module Strictness (Expr (..), analyse) where
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
+module Strictness where
+
+import Algebra.Lattice
 ```
 
 # Syntax
@@ -35,8 +40,6 @@ type Name = String -- We assume names are unique!
 data Bind
   = NonRec (Name, Expr)
   | Rec [(Name, Expr)]
-
-type Program = [Bind]
 ```
 
 Like in GHC, a program is just a list of top-level bindings. Also note that we
@@ -169,7 +172,7 @@ instance Show Strictness where
   show (Strict 0) = "S"
   show (Strict n) = "C(" ++ show (Strict (n-1)) ++ ")"
   show HyperStrict = "B"
-```haskell
+```
 
 The `Show` instance tries to adhere to GHC's syntax. You can see how call
 demands `C(_)` and regular strictness `S` could be elegantly unified in this
@@ -250,6 +253,10 @@ instance BoundedMeetSemiLattice Strictness where
   top = Lazy
 ```
 
+By the way, the syntactic resemblence to boolean operators or is no
+accident: In fact, the boolean algebra itself
+[is a very special kind of lattice](https://en.wikipedia.org/wiki/Boolean_algebra_(structure)).
+
 Where would this be useful? If you squint a little and call the meet
 operator 'both', you can denote sequential composition with this.
 
@@ -270,26 +277,330 @@ tracking the strictness demands on its free variables upon being
 put under a certain (i.e. head-strict) evaluation demand:
 
 ```haskell
-type StrEnv = String -> Strictness
+type StrEnv = Name -> Strictness
 
-extendStrEnv :: Name -> Strictness -> StrEnv -> StrEnv
-extendStrEnv n s env m
-  | n == m    = s
-  | otherwise = env m
+-- | Generalised, so that we can use it for more types than
+-- just 'StrEnv'.
+extendEnv :: Eq a => a -> b -> a -> b
+extendEnv a b env a'
+  | a == a'   = b
+  | otherwise = env a'
 ```
 
 Normally, we'd implement this as a `newtype`d `Map`, but here in
 order to keep the post short we just alias to the pointwise
-lattice on `String -> l` (i.e. ``(env1 \/ env2) n = env1 n\/ env2 n``).
+lattice on `Name -> l` (i.e. ``(env1 \/ env2) n = env1 n\/ env2 n``).
 
+This is enough vocabulary to analyse simple expressions. But, as
+discussed above, we need argument strictness to express how a
+function or lambda uses its arguments. So here we go:
 
+```haskell
+data ArgStr
+  = BottomArgStr
+  | TopArgStr
+  | ConsArgStr Strictness ArgStr
+  deriving Eq
 
-By the way, the syntactic resemblence to boolean or is no accident: In fact,
-the boolean algebra itself
-[is a very special kind of lattice](https://en.wikipedia.org/wiki/Boolean_algebra_(structure)).
+instance JoinSemiLattice ArgStr where
+  BottomArgStr \/ s = s
+  s \/ BottomArgStr = s
+  TopArgStr \/ _ = TopArgStr
+  _ \/ TopArgStr = TopArgStr
+  (ConsArgStr s1 a1) \/ (ConsArgStr s2 a2) = ConsArgStr (s1 \/ s2) (a1 \/ a2)
 
-<sup id="a1"><a href="#f1">1</a></sup>.
-<b id="f1">1</b> Note that there is also precedent of turning the lattice
-upside down and denoting the least constrained element by top. This view is
-adopted in the [dragon book](https://en.wikipedia.org/wiki/Compilers:_Principles,_Techniques,_and_Tools),
-for example. <a href="#a1">↩</a>
+instance BoundedJoinSemiLattice ArgStr where
+  bottom = BottomArgStr
+
+-- | This instance doesn't make a lot of sense semantically,
+-- but it's the dual to the 'JoinSemiLattice' instance.
+-- We mostly need this for 'top'.
+instance MeetSemiLattice ArgStr where
+  BottomArgStr /\ _ = BottomArgStr
+  _ /\ BottomArgStr = BottomArgStr
+  TopArgStr /\ s = s
+  s /\ TopArgStr = s
+  (ConsArgStr s1 a1) /\ (ConsArgStr s2 a2) = ConsArgStr (s1 /\ s2) (a1 /\ a2)
+
+instance BoundedMeetSemiLattice ArgStr where
+  top = TopArgStr
+
+consArgStr :: Strictness -> ArgStr -> ArgStr
+consArgStr Lazy TopArgStr           = TopArgStr
+consArgStr HyperStrict BottomArgStr = BottomArgStr
+consArgStr s a                      = ConsArgStr s a
+
+unconsArgStr :: ArgStr -> (Strictness, ArgStr)
+unconsArgStr BottomArgStr     = (bottom, BottomArgStr)
+unconsArgStr TopArgStr        = (top, TopArgStr)
+unconsArgStr (ConsArgStr s a) = (s, a)
+```
+
+Within this framework, a function like `error` would have strictness signature
+`ConsArgStr Lazy BottomArgStr`, expressing the fact that when it's applied to
+one argument, it will not necessarily evaluate that argument, but will lead to
+an exception (which is the same as divergence, semantically speaking) if the call
+expression would be evaluated. On the other hand, a lambda like `\f -> f a` would
+be denoted by an argument strictness like `ConsArgStr (Strict 1) TopArgStr`.
+What about `a`? That's tracked in the strictness environment, the other major
+component of an expression's strictness type:
+
+```haskell
+data StrType
+  = StrType
+  { fvs  :: StrEnv
+  , args :: ArgStr
+  } deriving (Eq, Show)
+
+instance JoinSemiLattice StrType where
+  (StrType fvs1 args1) \/ (StrType fvs2 args2) =
+    StrType (fvs1 \/ fvs2) (args1 \/ args2)
+
+instance BoundedJoinSemiLattice StrType where
+  bottom = StrType bottom bottom
+
+-- | This instance doesn't make a lot of sense semantically,
+-- but it's the dual to the 'JoinSemiLattice' instance.
+-- We mostly need this for 'top'.
+instance MeetSemiLattice StrType where
+  (StrType fvs1 args1) /\ (StrType fvs2 args2) =
+    StrType (fvs1 /\ fvs2) (args1 /\ args2)
+
+instance BoundedMeetSemiLattice StrType where
+top = StrType top top
+
+-- | This will be used instead of '(/\)' for sequential composition.
+-- It's right biased, meaning that it will return the
+-- argument strictness of the right argument.
+bothStrType :: StrType -> StrType -> StrType
+bothStrType (StrType fvs1 _) (StrType fvs2 args2) =
+  StrType (fvs1 /\ fvs2) args2
+  
+unitStrType :: Name -> Strictness -> StrType
+unitStrType n s = StrType (extendEnv n s top) top
+
+overArgs :: (ArgStr -> (a, ArgStr)) -> StrType -> (a, StrType)
+overArgs f ty =
+  let (a, args') = f (args ty)
+  in (a, ty { args = args' })
+```
+
+So, strictness environment for free variables, argument strictness for
+arguments. A last ingredient is an environment that will carry
+strictness signatures for functions we analysed before:
+
+```haskell
+type SigEnv = Name -> Maybe (Arity, StrType) -- Defn. of Arity follows
+
+emptySigEnv :: SigEnv
+emptySigEnv = const Nothing
+```
+
+Any strictness signature is only valid when a certain number of arguments
+is reached. We store this *arity* (as in unary, binary, etc.) alongside
+the strictness signature. Generally, assuming a higher arity can lead to
+more precise strictness signatures, but applies to less call sites.
+GHC will only analyse each function once and assume an incoming strictness
+demand correspond to manifest arity of the function, e.g. the number of
+top-level lambdas in the RHS of the function's definition.
+
+```haskell
+-- | Counts the number of top-level lambdas.
+manifestArity :: Expr -> Int
+manifestArity (Lam _ e) = 1 + manifestArity e
+manifestArity _ = 0
+```
+
+That's it! What follows are some auxiliary definitions
+that you can look up as needed:
+
+# Analysis
+
+Let's define the main analysis function for our core calculus:
+
+```haskell
+analyse :: Expr -> StrType
+```
+
+We analyse an expression to find out what strictness it puts its free
+variables under if put under head-demand:
+
+```haskell
+analyse = expr emptySigEnv 0
+
+expr :: SigEnv -> Int -> Expr -> StrType
+expr sigs incomingArity = \case
+  If b t e ->
+    expr sigs 0 b `bothStrType`
+      expr sigs incomingArity t \/ expr sigs incomingArity e
+```
+
+`analyse` immediately delegates to a more complicated auxiliary function.
+We'll first look at the `If` case here: If will sequentially combine
+('both') the analysis results from analysing the condition under incoming
+arity 0 with the result of joining the analysis results of both branches
+with the arity that came in from outside. Very much what we would expect
+after our reasoning above!
+
+```haskell
+  App f a ->
+    let
+      fTy = expr sigs (incomingArity + 1) f
+      (argStr, fTy') = overArgs unconsArgStr fTy
+      aTy =
+        case argStr of
+          -- bottom = unbounded arity, only possible constrained by the type
+          -- of `a`, which we don't look at here.
+          HyperStrict -> expr sigs maxBound a
+          Strict n -> expr sigs n a
+          -- `a` is possibly not evaluated at all, so nothing to see there
+          Lazy -> top
+    in aTy `bothStrType` fTy
+```
+
+In an application, the head will be analysed with an incremented incoming arity,
+while the argument is only evaluated if it was put under a strict context.
+This is determined by examining the strictness type of analysing `f`.
+
+The resulting types are sequentially combined ('both').
+Note that `bothStrType` is right-biased and will pass on the argument strictness
+from `fTy`, which is exactly what we want. This will get clearer once we examine
+the variable case.
+
+```haskell
+  Lam n body ->
+    let
+      bodyTy
+        | incomingArity <= 0 = top
+        | otherwise = expr sigs (incomingArity - 1) body
+      -- normally, we would also store the strictness of n in the syntax tree
+      -- or in a separate map, but we are only interested in free variables
+      -- here for simplicity.
+      (str, bodyTy') = peelFV n bodyTy
+    in modifyArgs (consArgStr str) bodyTy'
+```
+
+This is somewhat dual to the application case. Lambdas 'eat' arity, so when we run
+out of arity to feed it, we are not allowed to use analysis results from the body.
+The only sensible thing to assume is a `top` strictness type in that case.
+
+The call to `peelFV` will abstract out the strictness on the argument and we finally
+cons that strictness onto the argument strictness of the labmda body's strictness
+type. Consider what happens for an expression like `\f -> f a`: The lambda body
+puts its free variable `f` under strictness `Strict 1`, so when we abstract over
+`f`, we remove it from `fvs` and cons it to the lambdas argument strictness instead.
+
+```haskell
+  Var n ->
+    let sig = fromMaybe top $ do
+      (arity, sig) <- sigs n of
+      guard (arity <= incomingArity)
+      pure sig
+    in bothStrType (unitStrType n (Strict incomingArity)) sig
+```
+
+The variable case will try to look up a signature in the signature environment,
+check for its compatibility with the incoming arity and fall back to `top`
+if any of the guards fail. The resulting signature is combined with
+a unit strictness type just for this particular call site.
+
+A call to `const` with two arguments (so `arity == 2` when we hit the variable)
+would pass the arity check and return the `<S,_><L,_>` signature from above.
+The application case at any call site would then unleash the proper argument
+strictness on the concrete argument expressions.
+
+What remains is handling let-bindings. Let's look at the non-recursive case first:
+
+```haskell
+  Let (NonRec name rhs) body ->
+    let
+      arity = manifestArity rhs
+      rhsTy = expr sigs arity rhs
+      sigs' = extendEnv name (Just (arity, rhsTy)) sigs
+      bodyTy = expr sigs' incomingArity body
+      -- Normally, we would store how 'name' was used in the body somewhere
+      (_, bodyTy') = peelFV name bodyTy
+    in bodyTy'
+```
+
+Even without recursion, this is quite involved. First, we analyse the RHS
+assuming a call with manifest arity. The resulting strictness type is then inserted
+into the signature environment for the appropriate arity. The body is analysed
+with this new signature environment. As `rhsTy` is unleashed at call sites through
+the `Var` case, there is no need to `bothStrType` the resulting `bodyTy'` with
+`rhsTy` (and would even be wrong, consider the case where the binding is not used
+strictly).
+
+Fair enough, now onto the recursive case. Typically, this is the case where static
+analyses
+[have to yield approximate results in order to stay decidable](https://en.wikipedia.org/wiki/Rice%27s_theorem).
+Typically, this is achieved through calculating the least fixed-point of the
+transfer function wrt. to the analysis lattice. Strictness analysis is not
+different in that regard:
+
+```haskell
+  Let (Rec binds) body ->
+    let
+      sigs' = fixBinds sigs binds
+      bodyTy = expr sigs' incomingArity body
+      (_, bodyTy') = peelFVs (map snd binds) bodyTy
+    in bodyTy'
+```
+
+That wasn't so hard! It seems that a few more bindings were abstracted into
+`fixBinds`, which is responsible for finding a set of sound strictness
+signatures for the binding group. Let's see what else hides in `fixBinds`:
+
+```haskell
+fixBinds :: SigEnv -> [(Name, Expr)] -> SigEnv
+fixBinds sigs binds = toSigEnv stableTypes sigs
+  where
+    toSigEnv :: [(Int, StrType)] -> SigEnv -> SigEnv
+    toSigEnv = foldr (\((n, _), ty) sigs -> extendEnv n ty) sigs . zip binds
+
+    fromSigEnv :: SigEnv -> [(Int, StrType)]
+    fromSigEnv sigs = map (sigs . fst) binds
+```
+
+We'll convert back and forth between the `SigEnv` representation and the list
+of points of the `SigEnv` that are actually subject to change. `toSigEnv`
+converts the points of the current binding group into a proper `SigEnv` by
+adding them to the incoming `SigEnv`, which contains strictness signatures
+for outer bindings.
+
+```haskell
+    stableTypes :: [(Int, StrType)]
+    stableTypes = head . filter (uncurry (==)) $ zip approximations (tail approximations)
+
+    start :: [(Int, StrType)]
+    start = map (const (0, bottom)) binds
+
+    approximations :: [[(Int, StrType)]]
+    approximations = iterate iter start
+```
+
+This part is concerned with finding the fixed-point of `iter`, beginning with an
+optimistic approximation `start`, where all bindings are approximated by `bottom`.
+We have found a fixed-point as soon as `approximations` becomes stable. This is
+detected by `stableTypes`, which we converted into the result of `fixBinds` above.
+
+```haskell
+    iter tys = fromSigEnv . foldr iterBind (toSigEnv tys) binds
+
+    iterBind (name, rhs) sigs' =
+      let
+        arity = manifestArity rhs
+        rhsTy = expr sigs' (manifestArity rhs) rhs
+        (_, rhsTy') = peelFVs (map fst binds) rhsTy
+      in extendEnv name (Just (arity, rhsTy')) sigs'
+```
+
+Aha, so `iterBind` is where the logic from the non-recursive case ended up!
+The other functions were just a big build up to set up fixed-point iteration.
+We compute iterated approximations of the signature environment until we hit
+the fixed-point, at which point we have a sound approximation of program
+semantics.
+
+---
+
+Phew! That's it. Let's put our function to work.
