@@ -1,21 +1,79 @@
-<?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
-    <title>fixpt</title>
-    <link href="https://sgraf812.github.io//atom.xml" rel="self" />
-    <link href="https://sgraf812.github.io/" />
-    <id>https://sgraf812.github.io//atom.xml</id>
-    <author>
-        <name>Sebastian Graf</name>
-        <email>sgraf1337@gmail.com</email>
-    </author>
-    <updated>2018-12-30T00:00:00Z</updated>
-    <entry>
-    <title>All About Strictness Analysis (part 2)</title>
-    <link href="https://sgraf812.github.io//blog/2018-12-30-strictness-analysis-part-2.html" />
-    <id>https://sgraf812.github.io//blog/2018-12-30-strictness-analysis-part-2.html</id>
-    <published>2018-12-30T00:00:00Z</published>
-    <updated>2018-12-30T00:00:00Z</updated>
-    <summary type="html"><![CDATA[<p>Welcome back! At the end of <a href="/blog/2017-12-04-strictness-analysis-part-1.html">part 1</a> from December 4<sup id="a1"><a href="#f1">1</a></sup>, I made a promise to implement a strictness analysis à la GHC with you.</p>
+<!DOCTYPE html>
+<!--
+    Massively by HTML5 UP
+    html5up.net | @ajlkn
+    Hakyll integration by Sebastian Graf
+    Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <title>fixpt - All About Strictness Analysis (part 2)</title>
+
+    <link rel="apple-touch-icon" sizes="180x180" href="../assets/icon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="../assets/icon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../assets/icon/favicon-16x16.png">
+    <link rel="manifest" href="../assets/icon/manifest.json">
+    <link rel="mask-icon" href="../assets/icon/safari-pinned-tab.svg" color="#5bbad5">
+    <link rel="shortcut icon" href="../assets/icon/favicon.ico">
+    <meta name="msapplication-config" content="/assets/icon/browserconfig.xml">
+    <meta name="theme-color" content="#ffffff">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="../assets/css/main.css" />
+    <link rel="stylesheet" href="../assets/css/pygments.css" />
+    <noscript>
+        <link rel="stylesheet" href="../assets/css/noscript.css" />
+    </noscript>
+</head>
+
+<body>
+    <div id="wrapper" class="bg">
+        <header id="header">
+            <a href="../" class="logo">fixpt</a>
+        </header>
+
+        <nav id="nav">
+            <ul class="links">
+                <li class="active">
+                    <a href="../">Blog</a>
+                </li>
+                <li class>
+                    <a href="../about.html">About</a>
+                </li>
+            </ul>
+
+            <ul class="icons">
+                <li>
+                    <a href="https://reddit.com/user/sgraf812" class="icon fa-reddit" rel="nofollow">
+                        <span class="label">Reddit</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="https://github.com/sgraf812" class="icon fa-github" rel="nofollow">
+                        <span class="label">GitHub</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="https://twitter.com/sgraf1337" class="icon fa-twitter" rel="nofollow">
+                        <span class="label">Twitter</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <div id="main">
+            <section class="post">
+  <header class="major">
+    <span class="date">December 30, 2018</span>
+    <h1>All About Strictness Analysis (part 2)</h1>
+  </header>
+  <p>Welcome back! At the end of <a href="../blog/2017-12-04-strictness-analysis-part-1.html">part 1</a> from December 4<sup id="a1"><a href="#f1">1</a></sup>, I made a promise to implement a strictness analysis à la GHC with you.</p>
 <p>Why would this be useful? In the last post, I argued that a rough understanding of how strictness analysis works helps to debug and identify the actual causes of missed unboxing opportunities and fix them with minimal effort.</p>
 <p>So here it is, enjoy!</p>
 <!--more-->
@@ -191,9 +249,9 @@ joinOrMeet (<span class="fu">/</span>\<span class="fu">/</span>) (<span class="d
 <span class="kw">instance</span> <span class="dt">BoundedJoinSemiLattice</span> <span class="dt">ArgStr</span> <span class="kw">where</span>
   bottom <span class="fu">=</span> <span class="dt">BottomArgStr</span>
 
-<span class="co">-- | This instance doesn&#39;t make a lot of sense semantically,</span>
-<span class="co">-- but it&#39;s the dual to the &#39;JoinSemiLattice&#39; instance.</span>
-<span class="co">-- We mostly need this for &#39;top&#39;.</span>
+<span class="co">-- | This instance doesn't make a lot of sense semantically,</span>
+<span class="co">-- but it's the dual to the 'JoinSemiLattice' instance.</span>
+<span class="co">-- We mostly need this for 'top'.</span>
 <span class="kw">instance</span> <span class="dt">MeetSemiLattice</span> <span class="dt">ArgStr</span> <span class="kw">where</span>
   <span class="dt">BottomArgStr</span> <span class="fu">/</span>\ _ <span class="fu">=</span> <span class="dt">BottomArgStr</span>
   _ <span class="fu">/</span>\ <span class="dt">BottomArgStr</span> <span class="fu">=</span> <span class="dt">BottomArgStr</span>
@@ -227,9 +285,9 @@ unconsArgStr (<span class="dt">ConsArgStr</span> s a) <span class="fu">=</span> 
 <span class="kw">instance</span> <span class="dt">BoundedJoinSemiLattice</span> <span class="dt">StrType</span> <span class="kw">where</span>
   bottom <span class="fu">=</span> <span class="dt">StrType</span> bottom bottom
 
-<span class="co">-- | This instance doesn&#39;t make a lot of sense semantically,</span>
-<span class="co">-- but it&#39;s the dual to the &#39;JoinSemiLattice&#39; instance.</span>
-<span class="co">-- We mostly need this for &#39;top&#39;.</span>
+<span class="co">-- | This instance doesn't make a lot of sense semantically,</span>
+<span class="co">-- but it's the dual to the 'JoinSemiLattice' instance.</span>
+<span class="co">-- We mostly need this for 'top'.</span>
 <span class="kw">instance</span> <span class="dt">MeetSemiLattice</span> <span class="dt">StrType</span> <span class="kw">where</span>
   <span class="dt">StrType</span> fvs1 args1 <span class="fu">/</span>\ <span class="dt">StrType</span> fvs2 args2 <span class="fu">=</span>
     <span class="dt">StrType</span> (fvs1 <span class="fu">/</span>\ fvs2) (args1 <span class="fu">/</span>\ args2)
@@ -237,8 +295,8 @@ unconsArgStr (<span class="dt">ConsArgStr</span> s a) <span class="fu">=</span> 
 <span class="kw">instance</span> <span class="dt">BoundedMeetSemiLattice</span> <span class="dt">StrType</span> <span class="kw">where</span>
   top <span class="fu">=</span> <span class="dt">StrType</span> top top
 
-<span class="co">-- | This will be used instead of &#39;(/\)&#39; for sequential composition.</span>
-<span class="co">-- It&#39;s right biased, meaning that it will return the</span>
+<span class="co">-- | This will be used instead of '(/\)' for sequential composition.</span>
+<span class="co">-- It's right biased, meaning that it will return the</span>
 <span class="co">-- argument strictness of the right argument.</span>
 <span class="ot">bothStrType ::</span> <span class="dt">StrType</span> <span class="ot">-&gt;</span> <span class="dt">StrType</span> <span class="ot">-&gt;</span> <span class="dt">StrType</span>
 bothStrType (<span class="dt">StrType</span> fvs1 _) (<span class="dt">StrType</span> fvs2 args2) <span class="fu">=</span>
@@ -249,8 +307,8 @@ unitStrType n s <span class="fu">=</span> <span class="dt">StrType</span> (inser
 
 <span class="ot">overFVs ::</span> (<span class="dt">StrEnv</span> <span class="ot">-&gt;</span> (a, <span class="dt">StrEnv</span>)) <span class="ot">-&gt;</span> <span class="dt">StrType</span> <span class="ot">-&gt;</span> (a, <span class="dt">StrType</span>)
 overFVs f ty <span class="fu">=</span>
-  <span class="kw">let</span> (a, fvs&#39;) <span class="fu">=</span> f (fvs ty)
-  <span class="kw">in</span> (a, ty { fvs <span class="fu">=</span> fvs&#39; })
+  <span class="kw">let</span> (a, fvs') <span class="fu">=</span> f (fvs ty)
+  <span class="kw">in</span> (a, ty { fvs <span class="fu">=</span> fvs' })
 
 <span class="ot">peelFV ::</span> <span class="dt">Name</span> <span class="ot">-&gt;</span> <span class="dt">StrType</span> <span class="ot">-&gt;</span> (<span class="dt">Strictness</span>, <span class="dt">StrType</span>)
 peelFV n <span class="fu">=</span> overFVs <span class="fu">$</span> \fvs <span class="ot">-&gt;</span>
@@ -264,8 +322,8 @@ deleteFV <span class="fu">=</span> modifyFVs <span class="fu">.</span> deleteTM
 
 <span class="ot">overArgs ::</span> (<span class="dt">ArgStr</span> <span class="ot">-&gt;</span> (a, <span class="dt">ArgStr</span>)) <span class="ot">-&gt;</span> <span class="dt">StrType</span> <span class="ot">-&gt;</span> (a, <span class="dt">StrType</span>)
 overArgs f ty <span class="fu">=</span>
-  <span class="kw">let</span> (a, args&#39;) <span class="fu">=</span> f (args ty)
-  <span class="kw">in</span> (a, ty { args <span class="fu">=</span> args&#39; })
+  <span class="kw">let</span> (a, args') <span class="fu">=</span> f (args ty)
+  <span class="kw">in</span> (a, ty { args <span class="fu">=</span> args' })
 
 <span class="ot">modifyArgs ::</span> (<span class="dt">ArgStr</span> <span class="ot">-&gt;</span> <span class="dt">ArgStr</span>) <span class="ot">-&gt;</span> <span class="dt">StrType</span> <span class="ot">-&gt;</span> <span class="dt">StrType</span>
 modifyArgs f <span class="fu">=</span> snd <span class="fu">.</span> overArgs (\a <span class="ot">-&gt;</span> ((), f a))</code></pre></div>
@@ -293,16 +351,16 @@ expr sigs incomingArity <span class="fu">=</span> \<span class="kw">case</span>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">  <span class="dt">App</span> f a <span class="ot">-&gt;</span>
     <span class="kw">let</span>
       fTy <span class="fu">=</span> expr sigs (incomingArity <span class="fu">+</span> <span class="dv">1</span>) f
-      (argStr, fTy&#39;) <span class="fu">=</span> overArgs unconsArgStr fTy
+      (argStr, fTy') <span class="fu">=</span> overArgs unconsArgStr fTy
       aTy <span class="fu">=</span>
         <span class="kw">case</span> argStr <span class="kw">of</span>
           <span class="co">-- bottom = unbounded arity, only possibly constrained by the type</span>
-          <span class="co">-- of `a`, which we don&#39;t look at here.</span>
+          <span class="co">-- of `a`, which we don't look at here.</span>
           <span class="dt">HyperStrict</span> <span class="ot">-&gt;</span> expr sigs maxBound a
           <span class="dt">Strict</span> n <span class="ot">-&gt;</span> expr sigs n a
           <span class="co">-- `a` is possibly not evaluated at all, so nothing to see there</span>
           <span class="dt">Lazy</span> <span class="ot">-&gt;</span> top
-    <span class="kw">in</span> aTy <span class="ot">`bothStrType`</span> fTy&#39;</code></pre></div>
+    <span class="kw">in</span> aTy <span class="ot">`bothStrType`</span> fTy'</code></pre></div>
 <p>In an application, the head will be analysed with an incremented incoming arity, while the argument is only evaluated if it was put under a strict context. This is determined by examining the strictness type of analysing <code>f</code>.</p>
 <p>The resulting types are sequentially combined (‘both’). Note that <code>bothStrType</code> is right-biased and will pass on the argument strictness from <code>fTy'</code>, which is exactly what we want. This will get clearer once we examine the variable case.</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">  <span class="dt">Lam</span> n body <span class="ot">-&gt;</span>
@@ -313,8 +371,8 @@ expr sigs incomingArity <span class="fu">=</span> \<span class="kw">case</span>
       <span class="co">-- normally, we would also store the strictness of n in the syntax tree</span>
       <span class="co">-- or in a separate map, but we are only interested in free variables</span>
       <span class="co">-- here for simplicity.</span>
-      (str, bodyTy&#39;) <span class="fu">=</span> peelFV n bodyTy
-    <span class="kw">in</span> modifyArgs (consArgStr str) bodyTy&#39;</code></pre></div>
+      (str, bodyTy') <span class="fu">=</span> peelFV n bodyTy
+    <span class="kw">in</span> modifyArgs (consArgStr str) bodyTy'</code></pre></div>
 <p>This is somewhat dual to the application case. Lambdas ‘eat’ arity, so when we run out of arity to feed it, we are not allowed to use analysis results from the body. The only sensible thing to assume is a <code>top</code> strictness type in that case.</p>
 <p>The call to <code>peelFV</code> will abstract out the strictness on the argument and we finally cons that strictness onto the argument strictness of the lambda body’s strictness type. Consider what happens for an expression like <code>\f -&gt; f a</code>: The lambda body puts its free variable <code>f</code> under strictness <code>Strict 1</code>, so when we abstract over <code>f</code>, we remove it from <code>fvs</code> and cons it to the lambdas argument strictness instead.</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">  <span class="dt">Var</span> n <span class="ot">-&gt;</span>
@@ -330,19 +388,19 @@ expr sigs incomingArity <span class="fu">=</span> \<span class="kw">case</span>
     <span class="kw">let</span>
       arity <span class="fu">=</span> manifestArity rhs
       rhsTy <span class="fu">=</span> expr sigs arity rhs
-      sigs&#39; <span class="fu">=</span> Map.insert name (arity, rhsTy) sigs
-      bodyTy <span class="fu">=</span> expr sigs&#39; incomingArity body
-      <span class="co">-- Normally, we would store how &#39;name&#39; was used in the body somewhere</span>
-      bodyTy&#39; <span class="fu">=</span> deleteFV name bodyTy
-    <span class="kw">in</span> bodyTy&#39;</code></pre></div>
+      sigs' <span class="fu">=</span> Map.insert name (arity, rhsTy) sigs
+      bodyTy <span class="fu">=</span> expr sigs' incomingArity body
+      <span class="co">-- Normally, we would store how 'name' was used in the body somewhere</span>
+      bodyTy' <span class="fu">=</span> deleteFV name bodyTy
+    <span class="kw">in</span> bodyTy'</code></pre></div>
 <p>Even without recursion, this is quite involved. First, we analyse the RHS assuming a call with manifest arity. The resulting strictness type is then inserted into the signature environment for the appropriate arity. The body is analysed with this new signature environment. As <code>rhsTy</code> is unleashed at call sites through the <code>Var</code> case, there is no need to <code>bothStrType</code> the resulting <code>bodyTy'</code> with <code>rhsTy</code> (and would even be wrong, consider the case where the binding is not used strictly).</p>
 <p>Fair enough, now onto the recursive case. Typically, this is the case where static analyses <a href="https://en.wikipedia.org/wiki/Rice%27s_theorem">have to yield approximate results in order to stay decidable</a>. Typically, this is achieved through calculating the least fixed-point of the transfer function wrt. to the analysis lattice. Strictness analysis is no different in that regard:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">  <span class="dt">Let</span> (<span class="dt">Rec</span> binds) body <span class="ot">-&gt;</span>
     <span class="kw">let</span>
-      sigs&#39; <span class="fu">=</span> fixBinds sigs binds
-      bodyTy <span class="fu">=</span> expr sigs&#39; incomingArity body
-      bodyTy&#39; <span class="fu">=</span> foldr deleteFV bodyTy (map fst binds)
-    <span class="kw">in</span> bodyTy&#39;</code></pre></div>
+      sigs' <span class="fu">=</span> fixBinds sigs binds
+      bodyTy <span class="fu">=</span> expr sigs' incomingArity body
+      bodyTy' <span class="fu">=</span> foldr deleteFV bodyTy (map fst binds)
+    <span class="kw">in</span> bodyTy'</code></pre></div>
 <p>That wasn’t so hard! It seems that a few more functions were abstracted into <code>fixBinds</code>, which is responsible for finding a set of sound strictness signatures for the binding group. Let’s see what else hides in <code>fixBinds</code>:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">fixBinds ::</span> <span class="dt">SigEnv</span> <span class="ot">-&gt;</span> [(<span class="dt">Name</span>, <span class="dt">Expr</span>)] <span class="ot">-&gt;</span> <span class="dt">SigEnv</span>
 fixBinds sigs binds <span class="fu">=</span> toSigEnv stableTypes
@@ -372,17 +430,17 @@ fixBinds sigs binds <span class="fu">=</span> toSigEnv stableTypes
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">    iter ::</span> [(<span class="dt">Arity</span>, <span class="dt">StrType</span>)] <span class="ot">-&gt;</span> [(<span class="dt">Arity</span>, <span class="dt">StrType</span>)]
     iter tys <span class="fu">=</span> fromSigEnv (foldr iterBind (toSigEnv tys) binds)
 
-    iterBind (name, rhs) sigs&#39; <span class="fu">=</span>
+    iterBind (name, rhs) sigs' <span class="fu">=</span>
       <span class="kw">let</span>
         arity <span class="fu">=</span> manifestArity rhs
-        rhsTy <span class="fu">=</span> expr sigs&#39; (manifestArity rhs) rhs
-        rhsTy&#39; <span class="fu">=</span> foldr deleteFV rhsTy names
-      <span class="kw">in</span> Map.insert name (arity, rhsTy&#39;) sigs&#39;</code></pre></div>
+        rhsTy <span class="fu">=</span> expr sigs' (manifestArity rhs) rhs
+        rhsTy' <span class="fu">=</span> foldr deleteFV rhsTy names
+      <span class="kw">in</span> Map.insert name (arity, rhsTy') sigs'</code></pre></div>
 <p>Aha, so <code>iterBind</code> is where the logic from the non-recursive case ended up! The other functions were just a big build up to set up fixed-point iteration. We compute iterated approximations of the signature environment until we hit the fixed-point, at which point we have a sound approximation of program semantics.</p>
 <h2 id="test-drive">Test-drive</h2>
 <p>Phew! That’s it. Let’s put our function to work.</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">a, b, c,<span class="ot"> f ::</span> <span class="dt">Expr</span>
-(a<span class="fu">:</span>b<span class="fu">:</span>c<span class="fu">:</span>_<span class="fu">:</span>_<span class="fu">:</span>f<span class="fu">:</span>_) <span class="fu">=</span> map (<span class="dt">Var</span> <span class="fu">.</span> (<span class="fu">:</span>[])) [<span class="ch">&#39;a&#39;</span><span class="fu">..</span>]
+(a<span class="fu">:</span>b<span class="fu">:</span>c<span class="fu">:</span>_<span class="fu">:</span>_<span class="fu">:</span>f<span class="fu">:</span>_) <span class="fu">=</span> map (<span class="dt">Var</span> <span class="fu">.</span> (<span class="fu">:</span>[])) [<span class="ch">'a'</span><span class="fu">..</span>]
 
 <span class="ot">exprs ::</span> [<span class="dt">Expr</span>]
 exprs <span class="fu">=</span>
@@ -424,7 +482,7 @@ StrType {fvs = TotalMap {def = L, points = fromList [(&quot;a&quot;,S),(&quot;c&
 <p>The last two expressions show-case what this simple analysis is able to infer. First, there’s a nonterminating <code>let f b = f b in f a</code> which is correctly denoted by <code>bot</code>tom. This already hints that our analysis is able carry out some inductive reasoning. The last example then analyses <code>let f b = if b then c else f b in f a</code> to find out that both <code>a</code> and <code>c</code> are used strictly. Cool!</p>
 <h2 id="conclusion">Conclusion</h2>
 <p>We defined a projection-based strictness analysis in the style of GHC that actually finds out useful things about our code!</p>
-<p>I hope that in doing so, you got a feeling about what GHC can and cannot derive about the performance critical code you write. Specifically, looking back at the problem in <a href="/blog/2017-12-04-strictness-analysis-part-1.html">part 1</a>, you should now be able to see why we needed a bang in <code>printAverage</code> and how that enables GHC to infer that the accumulator can be completely unboxed. This is just by mechanically following the analysis rules above!</p>
+<p>I hope that in doing so, you got a feeling about what GHC can and cannot derive about the performance critical code you write. Specifically, looking back at the problem in <a href="../blog/2017-12-04-strictness-analysis-part-1.html">part 1</a>, you should now be able to see why we needed a bang in <code>printAverage</code> and how that enables GHC to infer that the accumulator can be completely unboxed. This is just by mechanically following the analysis rules above!</p>
 <p>Granted, there are many details in which GHC’s demand analyser (which does strictness analysis) differs from the analysis above:</p>
 <ul>
 <li>Local, non-recursive thunk bindings have a different analysis rule than functions</li>
@@ -439,310 +497,99 @@ StrType {fvs = TotalMap {def = L, points = fromList [(&quot;a&quot;,S),(&quot;c&
 </ul>
 <p>I agree if you say that the documentation story is a little insatisfying. Anyway, the ultimate reference is always the code of <a href="https://gitlab.haskell.org/ghc/ghc/blob/master/compiler/stranal/DmdAnal.hs">the demand analyser within GHC itself</a>.</p>
 <p>If/when I come around to it, I can finally pitch you my <a href="https://hackage.haskell.org/package/datafix"><code>datafix</code> library</a> for computing fixed-points like we just did in a more principled way. So stay stuned for part 4 :)</p>
-<p><b id="f1">1</b> … 2017<a href="#a1">↩</a></p>]]></summary>
-</entry>
-<entry>
-    <title>All About Strictness Analysis (part 1)</title>
-    <link href="https://sgraf812.github.io//blog/2017-12-04-strictness-analysis-part-1.html" />
-    <id>https://sgraf812.github.io//blog/2017-12-04-strictness-analysis-part-1.html</id>
-    <published>2017-12-04T00:00:00Z</published>
-    <updated>2017-12-04T00:00:00Z</updated>
-    <summary type="html"><![CDATA[<p>Non-strict languages like Haskell often require the programmer to reason about strictness to achieve good performance. A while ago, Michael Snoyman wrote a <a href="https://www.fpcomplete.com/blog/2017/09/all-about-strictness">blog post</a> about this, giving an introduction on the matter as well as an overview over the tools at our disposal.</p>
-<p>In this post, I want to offer another, more surgical approach to plugging space leaks that works hand in hand with optimizations carried out by the compiler.</p>
-<!--more-->
-<h2 id="the-setting">The Setting</h2>
-<p>Michael Snoyman fixed problems due to laziness by making ample use of strictness annotations. This is the right approach when you run into space leaks in debug builds. It’s also good practice for library writers, where you cannot anticipate usage patterns, so the least you could do is force strict parameters as early as possible.</p>
-<p>Running example in Snoyman’s blog post were variants of the following program computing the average of a list of <code>Int</code>egers:</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">RunningTotal</span> <span class="fu">=</span> <span class="dt">RunningTotal</span>
-  {<span class="ot"> sum   ::</span> <span class="dt">Int</span>
-  ,<span class="ot"> count ::</span> <span class="dt">Int</span>
-  }
+<p><b id="f1">1</b> … 2017<a href="#a1">↩</a></p>
+</section>
+<div id="disqus_thread"></div>
+<script>
+  /**
+  *  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+  *  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+  /*
+  var disqus_config = function () {
+  this.page.url = fixpt.de/blog/2018-12-30-strictness-analysis-part-2.html;  // Replace PAGE_URL with your page's canonical URL variable
+  this.page.identifier = /blog/2018-12-30-strictness-analysis-part-2.html; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+  };
+  */
+  (function () { // DON'T EDIT BELOW THIS LINE
+    var d = document, s = d.createElement('script');
+    s.src = 'https://fixpt.disqus.com/embed.js';
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+</script>
+<noscript>Please enable JavaScript to view the
+  <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+</noscript>
+        </div>
 
-<span class="ot">printAverage ::</span> <span class="dt">RunningTotal</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
-printAverage (<span class="dt">RunningTotal</span> sum count)
-  <span class="fu">|</span> count <span class="fu">==</span> <span class="dv">0</span> <span class="fu">=</span> error <span class="st">&quot;Need at least one value!&quot;</span>
-  <span class="fu">|</span> otherwise <span class="fu">=</span> print (fromIntegral sum <span class="fu">/</span> fromIntegral<span class="ot"> count ::</span> <span class="dt">Double</span>)
+        <footer id="footer">
+            <section>
+                <form method="POST" action="https://formspree.io/sgraf1337@gmail.com">
+                    <div class="field">
+                        <label for="name">Name</label>
+                        <input type="text" name="name" id="name" />
+                    </div>
+                    <div class="field">
+                        <label for="email">Email</label>
+                        <input type="text" name="email" id="email" />
+                    </div>
+                    <div class="field">
+                        <label for="message">Message</label>
+                        <textarea name="message" id="message" rows="3"></textarea>
+                    </div>
+                    <ul class="actions">
+                        <li>
+                            <input type="submit" value="Send Message" />
+                        </li>
+                    </ul>
+                </form>
+            </section>
+            <section class="split contact">
+                <section>
+                    <h3>E-mail</h3>
+                    <p>
+                        <a href="mailto:sgraf1337@gmail.com">sgraf1337@gmail.com</a>
+                    </p>
+                </section>
+                <section>
+                    <h3>Social</h3>
+                    <ul class="icons alt">
+                        <li>
+                            <a href="https://reddit.com/user/sgraf812" class="icon fa-reddit" rel="nofollow">
+                                <span class="label">Reddit</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://github.com/sgraf812" class="icon fa-github" rel="nofollow">
+                                <span class="label">GitHub</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://twitter.com/sgraf1337" class="icon fa-twitter" rel="nofollow">
+                                <span class="label">Twitter</span>
+                            </a>
+                        </li>
+                    </ul>
+                </section>
+            </section>
+        </footer>
+        <!-- Copyright -->
+        <div id="copyright">
+            <ul>
+                <li>&copy; HTML5 UP</li>
+                <li>Design by
+                    <a href="https://html5up.net">HTML5 UP</a>
+                </li>
+                <li>Adapted from the Jekyll integration by
+                    <a href="https://somiibo.com">Somiibo</a>
+                </li>
+                <li>Powered by
+                    <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+                </li>
+                </li>
+            </ul>
+        </div>
+    </div>
+</body>
 
-<span class="ot">printListAverage ::</span> [<span class="dt">Int</span>] <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
-printListAverage <span class="fu">=</span> go (<span class="dt">RunningTotal</span> <span class="dv">0</span> <span class="dv">0</span>)
-  <span class="kw">where</span>
-    go rt [] <span class="fu">=</span> printAverage rt
-    go (<span class="dt">RunningTotal</span> sum count) (x<span class="fu">:</span>xs) <span class="fu">=</span>
-      go (<span class="dt">RunningTotal</span> (sum <span class="fu">+</span> x) (count <span class="fu">+</span> <span class="dv">1</span>)) xs
-
-<span class="ot">main ::</span> <span class="dt">IO</span> ()
-main <span class="fu">=</span> printListAverage [<span class="dv">1</span><span class="fu">..</span><span class="dv">1000000</span>]</code></pre></div>
-<p>In absence of any optimization, this is quite hungry for memory:</p>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">$ <span class="ex">stack</span> --resolver=nightly-2017-12-01 ghc -- -O0 average.hs <span class="kw">&amp;&amp;</span> <span class="ex">./average</span> +RTS -s
-<span class="ex">500000.5</span>
-     <span class="ex">258</span>,650,856 bytes allocated in the heap
-     <span class="ex">348</span>,098,952 bytes copied during GC
-      <span class="ex">74</span>,388,992 bytes maximum residency (9 sample(s))
-         <span class="ex">599</span>,832 bytes maximum slop
-             <span class="ex">179</span> MB total memory in use (0 MB lost due to fragmentation)</code></pre></div>
-<p>Significant numbers are roughly 250MB in allocations over the course of execution, as well as a maximum working set of 74MB. I’m currently on stackage <code>nightly-2017-12-01</code> (GHC 8.2.2) on a Windows box, which might explain differences in measurement.</p>
-<p>The post goes on to annotate the accumulating parameter of <code>go</code> with bang patterns:</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE BangPatterns #-}</span>
-
-<span class="kw">data</span> <span class="dt">RunningTotal</span> <span class="fu">=</span> <span class="dt">RunningTotal</span>
-  {<span class="ot"> sum   ::</span> <span class="dt">Int</span>
-  ,<span class="ot"> count ::</span> <span class="dt">Int</span>
-  }
-
-<span class="ot">printAverage ::</span> <span class="dt">RunningTotal</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
-printAverage (<span class="dt">RunningTotal</span> sum count)
-  <span class="fu">|</span> count <span class="fu">==</span> <span class="dv">0</span> <span class="fu">=</span> error <span class="st">&quot;Need at least one value!&quot;</span>
-  <span class="fu">|</span> otherwise <span class="fu">=</span> print (fromIntegral sum <span class="fu">/</span> fromIntegral<span class="ot"> count ::</span> <span class="dt">Double</span>)
-
-<span class="ot">printListAverage ::</span> [<span class="dt">Int</span>] <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
-printListAverage <span class="fu">=</span> go (<span class="dt">RunningTotal</span> <span class="dv">0</span> <span class="dv">0</span>)
-  <span class="kw">where</span>
-    go rt [] <span class="fu">=</span> printAverage rt
-    go (<span class="dt">RunningTotal</span> <span class="fu">!</span>sum <span class="fu">!</span>count) (x<span class="fu">:</span>xs) <span class="fu">=</span> <span class="co">-- only this line changed</span>
-      go (<span class="dt">RunningTotal</span> (sum <span class="fu">+</span> x) (count <span class="fu">+</span> <span class="dv">1</span>)) xs
-
-<span class="ot">main ::</span> <span class="dt">IO</span> ()
-main <span class="fu">=</span> printListAverage [<span class="dv">1</span><span class="fu">..</span><span class="dv">1000000</span>]</code></pre></div>
-<p>This has a great effect on maximum residency:</p>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">$ <span class="ex">stack</span> --resolver=nightly-2017-12-01 ghc -- -O0 average.hs <span class="kw">&amp;&amp;</span> <span class="ex">./average</span> +RTS -s
-<span class="ex">500000.5</span>
-     <span class="ex">192</span>,099,048 bytes allocated in the heap
-         <span class="ex">245</span>,416 bytes copied during GC
-          <span class="ex">42</span>,856 bytes maximum residency (2 sample(s))
-          <span class="ex">30</span>,872 bytes maximum slop
-               <span class="ex">2</span> MB total memory in use (0 MB lost due to fragmentation)
-<span class="ex">...</span>
-<span class="ex">INIT</span>    time    0.000s  (  0.000s elapsed)
-<span class="ex">MUT</span>     time    0.031s  (  0.029s elapsed)
-<span class="ex">GC</span>      time    0.000s  (  0.001s elapsed)
-<span class="ex">EXIT</span>    time    0.000s  (  0.000s elapsed)
-<span class="ex">Total</span>   time    0.031s  (  0.030s elapsed)</code></pre></div>
-<p>The program now executes in constant residency, which, in the presence of garbage collection, guarantees constant space usage! Nonetheless, we still produce a lot of garbage (190MB) and need 30ms to arrive at that result.</p>
-<h2 id="optimizations">Optimizations</h2>
-<p>Compare that to what happens when we compile with optimizations on:</p>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">$ <span class="ex">stack</span> --resolver=nightly-2017-12-01 ghc -- -O2 average.hs <span class="kw">&amp;&amp;</span> <span class="ex">./average</span> +RTS -s
-<span class="ex">500000.5</span>
-     <span class="ex">128</span>,098,744 bytes allocated in the heap
-          <span class="ex">13</span>,800 bytes copied during GC
-          <span class="ex">42</span>,856 bytes maximum residency (1 sample(s))
-          <span class="ex">30</span>,872 bytes maximum slop
-               <span class="ex">2</span> MB total memory in use (0 MB lost due to fragmentation)
-<span class="ex">...</span>
-<span class="ex">INIT</span>    time    0.000s  (  0.000s elapsed)
-<span class="ex">MUT</span>     time    0.016s  (  0.014s elapsed)
-<span class="ex">GC</span>      time    0.000s  (  0.000s elapsed)
-<span class="ex">EXIT</span>    time    0.000s  (  0.000s elapsed)
-<span class="ex">Total</span>   time    0.016s  (  0.015s elapsed)</code></pre></div>
-<p>Optimizations chipped off a huge amount of total allocations and also cut execution time in half.</p>
-<p>How can we improve on this? By deleting the two bangs we inserted earlier (simply for dramatic effect) and placing one in the pattern of <code>printAverage</code> instead:</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE BangPatterns #-}</span>
-
-<span class="kw">data</span> <span class="dt">RunningTotal</span> <span class="fu">=</span> <span class="dt">RunningTotal</span>
-  {<span class="ot"> sum   ::</span> <span class="dt">Int</span>
-  ,<span class="ot"> count ::</span> <span class="dt">Int</span>
-  }
-
-<span class="ot">printAverage ::</span> <span class="dt">RunningTotal</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
-printAverage (<span class="dt">RunningTotal</span> <span class="fu">!</span>sum count) <span class="co">-- New bang here</span>
-  <span class="fu">|</span> count <span class="fu">==</span> <span class="dv">0</span> <span class="fu">=</span> error <span class="st">&quot;Need at least one value!&quot;</span>
-  <span class="fu">|</span> otherwise <span class="fu">=</span> print (fromIntegral sum <span class="fu">/</span> fromIntegral<span class="ot"> count ::</span> <span class="dt">Double</span>)
-
-<span class="ot">printListAverage ::</span> [<span class="dt">Int</span>] <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
-printListAverage <span class="fu">=</span> go (<span class="dt">RunningTotal</span> <span class="dv">0</span> <span class="dv">0</span>)
-  <span class="kw">where</span>
-    go rt [] <span class="fu">=</span> printAverage rt
-    go (<span class="dt">RunningTotal</span> sum count) (x<span class="fu">:</span>xs) <span class="fu">=</span> <span class="co">-- No more bangs here</span>
-      go (<span class="dt">RunningTotal</span> (sum <span class="fu">+</span> x) (count <span class="fu">+</span> <span class="dv">1</span>)) xs
-
-<span class="ot">main ::</span> <span class="dt">IO</span> ()
-main <span class="fu">=</span> printListAverage [<span class="dv">1</span><span class="fu">..</span><span class="dv">1000000</span>]</code></pre></div>
-<p>Compile and execute this in old fashion with optimizations on:</p>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">$ <span class="ex">stack</span> --resolver=nightly-2017-12-01 ghc -- -O2 average.hs <span class="kw">&amp;&amp;</span> <span class="ex">./average</span> +RTS -s
-<span class="ex">500000.5</span>
-      <span class="ex">80</span>,098,744 bytes allocated in the heap
-           <span class="ex">5</span>,864 bytes copied during GC
-          <span class="ex">42</span>,856 bytes maximum residency (1 sample(s))
-          <span class="ex">30</span>,872 bytes maximum slop
-               <span class="ex">2</span> MB total memory in use (0 MB lost due to fragmentation)
-<span class="ex">...</span>
-<span class="ex">INIT</span>    time    0.000s  (  0.000s elapsed)
-<span class="ex">MUT</span>     time    0.000s  (  0.009s elapsed)
-<span class="ex">GC</span>      time    0.000s  (  0.000s elapsed)
-<span class="ex">EXIT</span>    time    0.000s  (  0.000s elapsed)
-<span class="ex">Total</span>   time    0.000s  (  0.009s elapsed)</code></pre></div>
-<p>Another huge chunk of allocations is gone and execution time reduced by at least 30% again! What just happened?</p>
-<h2 id="the-compiler-can-reason-about-strictness">The compiler can reason about strictness</h2>
-<p>The strictness analysis of GHC (which is integrated in its <a href="https://ghc.haskell.org/trac/ghc/wiki/Commentary/Compiler/Demand">Demand Analyzer</a>, a behemoth that interleaves three different analyses) is quite capable. Without any intervention it would have recognized that the recursive <code>go</code> is strict not only in the <code>RunningTotal</code> constructor, but also in its <code>count</code> field. Perhaps surprisingly, it would find the <code>sum</code> field <em>not</em> to be evaluated strictly.</p>
-<p>That’s due to a subtlety in the definition of <code>printAverage</code>: Note that in the <code>count == 0</code> error case that <code>sum</code> isn’t evaluated at all! And indeed, <code>printAverage (RunningTotal undefined 0)</code> will print the expected error message instead of crashing due to <code>undefined</code>, which is the very definition of being lazy in <code>sum</code>. This extends to a call like <code>go (RunningTotal undefined 0) []</code>, so GHC can’t just unbox the <code>sum</code> field even if the recursive case of <code>go</code> is annotated. So placing a bang in <code>printAverage</code> makes sense after all: There isn’t much utility in allowing calls like <code>printAverage (RunningTotal undefined 0)</code>.</p>
-<p>What I found quite essential to pin down the cause of this performance regression is a combination of looking at the GHC Core output as well as reproduce what strictness analysis found out. Let’s start with a crash course on a simple strictness analysis similar to GHC’s.</p>
-<p>In order to be scalable, GHC summarizes each function by a <em>demand signature</em> (consult the <a href="https://ghc.haskell.org/trac/ghc/wiki/Commentary/Compiler/Demand">GHC wiki page</a> for details), part of which relates how a single call evaluates its arguments and free variables. The signature for <code>printAverage</code> for example looks like <code>&lt;S(LS(S)),_&gt;</code> (we elide usage demands, suggested by the <code>_</code> wildcard), which reads as: When <code>printAverage</code> is called with one argument, it will evaluate that argument strictly (the <code>RunningTotal</code> box), as well as unpack the boxed <code>Int</code> in its second field (<code>count</code>) strictly, while being <code>L</code>azy in the first field (<code>sum</code>).</p>
-<p>It’s not hard to see how to arrive at that signature: We (and the compiler) assume a call with one argument (ignoring intricacies regarding <code>IO</code>), and see that the first branch is lazy in <code>sum</code>, while the second is strict in both. Prior to that, the <code>RunningTotal</code> is unpacked (evaluated!) and <code>count</code> is compared to 0, which also entails unpacking the <code>Int</code> constructor to get at the unboxed <code>Int#</code>. Combined, <code>RunningTotal</code>s <code>count</code> field is put under strictness <code>S(S)</code> (the unpacked <code>Int#</code> in the box is evaluated strictly), while <code>sum</code> is put under strictness <code>L</code>, resulting in said strictness demand of <code>S(LS(S))</code> on the <code>RunningTotal</code> argument.</p>
-<p>Non-recursive functions are trivial to analyze and are inlined most of the time anyway. What about a recursive function, such as <code>go</code>? Let’s see what GHC found out by dumping the module’s Core IR after the strictness analyzer has been run with <code>-ddump-stranal</code> (simplified):</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="fu">$</span> stack <span class="co">--resolver=nightly-2017-12-01 ghc -- -O2 average.hs -ddump-stranal -fforce-recomp</span>
-[<span class="dv">1</span> <span class="kw">of</span> <span class="dv">1</span>] <span class="dt">Compiling</span> <span class="dt">Main</span>             ( average<span class="fu">.</span>hs, average<span class="fu">.</span>o )
-
-<span class="fu">====================</span> <span class="dt">Demand</span> analysis <span class="fu">====================</span>
-<span class="fu">...</span>
-<span class="ot">go ::</span> <span class="dt">RunningTotal</span> <span class="ot">-&gt;</span> [<span class="dt">Int</span>] <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
-[<span class="fu">...</span>
- <span class="dt">Arity</span><span class="fu">=</span><span class="dv">2</span>,
- <span class="dt">Str</span><span class="fu">=&lt;</span><span class="dt">S</span>(<span class="dt">LS</span>(<span class="dt">S</span>)),<span class="dv">1</span><span class="fu">*</span><span class="dt">U</span>(<span class="dv">1</span><span class="fu">*</span><span class="dt">U</span>(<span class="dt">U</span>),<span class="dv">1</span><span class="fu">*</span><span class="dt">U</span>(<span class="dt">U</span>))<span class="fu">&gt;&lt;</span><span class="dt">S</span>,<span class="dv">1</span><span class="fu">*</span><span class="dt">U</span><span class="fu">&gt;</span>,
- <span class="fu">...</span>]
-go
-  <span class="fu">=</span> \ (<span class="ot">rt ::</span> <span class="dt">RunningTotal</span>)
-      (<span class="ot">xs ::</span> [<span class="dt">Int</span>]) <span class="ot">-&gt;</span>
-      <span class="kw">case</span> xs <span class="kw">of</span>
-        [] <span class="ot">-&gt;</span> <span class="co">-- inlining of `printAverage rt`</span>
-        <span class="fu">:</span> x xs <span class="ot">-&gt;</span>
-          <span class="kw">case</span> rt <span class="kw">of</span>
-            <span class="dt">RunningTotal</span> sum count <span class="ot">-&gt;</span>
-              go
-                (<span class="dt">Main.RunningTotal</span>
-                  (<span class="fu">GHC.Num.$</span>fNumInt_<span class="fu">$</span>c<span class="fu">+</span> sum x)
-                  (<span class="kw">case</span> count <span class="kw">of</span>
-                    <span class="dt">GHC.Types.I</span><span class="fu">#</span> count<span class="fu">#</span> <span class="ot">-&gt;</span>
-                      <span class="dt">GHC.Types.I</span><span class="fu">#</span> (<span class="fu">GHC.Prim.+#</span> count<span class="fu">#</span> <span class="dv">1</span><span class="fu">#</span>)))
-                xs
-<span class="fu">...</span>
-<span class="fu">====================</span> <span class="dt">Demand</span> analysis <span class="fu">====================</span>
-<span class="fu">...</span></code></pre></div>
-<p>Note that there are multiple runs of the demand analyzer, but we’ll focus on the first run for now, before any of the strictness information was exploited by transformations downstream.</p>
-<p>Crucial is the demand signature assigned to <code>go</code>, which is available as the <code>Str</code> attribute (usage demands elided again): <code>&lt;S(LS(S)),_&gt;&lt;S,_&gt;</code>. This is just as expected. The first <code>RunningTotal</code> argument is unpacked all the time (in the <code>[]</code> case, that’s done by <code>printAverage</code>), but its <code>sum</code> field is only evaluated lazily because the error case in <code>printAverage</code> isn’t strict in it, so by induction, <code>go</code> is neither. The second argument is the list of integers to average, which we immediately match on, so naturally its outer constructor is used strictly.</p>
-<p>It’s one thing for humans to reason like this, but how do we teach this to a compiler? The key here is inductive reasoning: Under the assumption that <code>go</code> has the above demand signature to be unleashed at recursive call sites, we can indeed verify <code>go</code> has this signature.</p>
-<p>For that, the compiler initially assumes the most <em>optimistic</em> demand signature possible for <code>go</code>, which corresponds to <code>&lt;S(S(S)S(S)),_&gt;&lt;S,_&gt;</code><sup id="a1"><a href="#f1">1</a></sup>, the demand a <code>deepseq</code> would put on the arguments. Assuming this for the recursive case, we can see that the newly constructed <code>RunningTotal (sum + x) (count + 1)</code> is <code>deepseq</code>ed immediately, which translates into a strictness of <code>S(S)</code> on both fields of the <code>RunningTotal</code> argument.</p>
-<p>In the base case, however, the call to <code>printAverage</code> causes the <code>count</code> field to only be evaluated lazily. That’s enough for the whole case match to be lazy in <code>count</code>, so the computed strictness signature is <code>&lt;S(LS(S)),_&gt;&lt;S,_&gt;</code>. Now the compiler has to reiterate analysis of <code>go</code>, because the assumed signature was too optimistic. Fortunately, under the assumption of <code>&lt;S(LS(S)),_&gt;&lt;S,_&gt;</code> for the recursive call, we arrive at exactly the same signature. Analysis has reached a <em>fixed-point</em> in its endeavour to find a conservative approximation for the strictness properties of <code>go</code> at runtime.</p>
-<h2 id="all-boxes-must-go">All boxes must go</h2>
-<p>Having a basic understanding of how strictness analysis works, we see that <code>printAverage</code> is the reason why <code>sum</code> isn’t unboxed. As soon as we add the bang in the relevant position, as I foreshadowed above, we arrive at the following, simplified Core output:</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="fu">$</span> stack <span class="co">--resolver=nightly-2017-12-01 ghc -- -O2 average.hs -ddump-simpl -fforce-recomp</span>
-<span class="fu">...</span>
-Main.main_<span class="fu">$</span>s<span class="fu">$</span>wgo
-<span class="ot">  ::</span> [<span class="dt">Int</span>] <span class="ot">-&gt;</span> <span class="dt">GHC.Prim.Int</span><span class="fu">#</span> <span class="ot">-&gt;</span> <span class="dt">GHC.Prim.Int</span><span class="fu">#</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
-[<span class="dt">GblId</span>, <span class="dt">Arity</span><span class="fu">=</span><span class="dv">3</span>, <span class="dt">Str</span><span class="fu">=&lt;</span><span class="dt">S</span>,<span class="dv">1</span><span class="fu">*</span><span class="dt">U</span><span class="fu">&gt;&lt;</span><span class="dt">S</span>,<span class="dt">U</span><span class="fu">&gt;&lt;</span><span class="dt">L</span>,<span class="dt">U</span><span class="fu">&gt;</span>]
-Main.main_<span class="fu">$</span>s<span class="fu">$</span>wgo
-  <span class="fu">=</span> \ (<span class="ot">xs ::</span> [<span class="dt">Int</span>])
-      (<span class="ot">count ::</span> <span class="dt">GHC.Prim.Int</span><span class="fu">#</span>)
-      (sum<span class="ot"> ::</span> <span class="dt">GHC.Prim.Int</span><span class="fu">#</span>) <span class="ot">-&gt;</span>
-      <span class="kw">case</span> xs <span class="kw">of</span>
-        [] <span class="ot">-&gt;</span>
-          <span class="kw">case</span> count <span class="kw">of</span>
-            <span class="dv">0</span><span class="fu">#</span> <span class="ot">-&gt;</span> lvl2_r4lk <span class="co">-- error &quot;...&quot;</span>
-            _ <span class="ot">-&gt;</span>
-              (GHC.IO.Handle.Text.hPutStr2
-                 GHC.IO.Handle.FD.stdout
-                 (<span class="kw">case</span> <span class="fu">GHC.Prim./##</span>
-                         (GHC.Prim.int2Double<span class="fu">#</span> sum) (GHC.Prim.int2Double<span class="fu">#</span> wild1_X1r)
-                  <span class="kw">of</span>
-                    _ <span class="ot">-&gt;</span>
-                      <span class="fu">GHC.Float.$</span>w<span class="fu">$</span>sshowSignedFloat
-                        <span class="fu">GHC.Float.$</span>fShowDouble2
-                        GHC.Float.minExpt
-                        wild4_a3Qb
-                        (<span class="dt">GHC.Types</span><span class="fu">.</span>[] <span class="fu">@</span> <span class="dt">Char</span>))
-                 <span class="dt">GHC.Types.True</span>)
-        <span class="fu">:</span> x xs <span class="ot">-&gt;</span>
-          <span class="fu">$</span>wgo_r4ll
-            (<span class="kw">case</span> x <span class="kw">of</span>
-              <span class="dt">GHC.Types.I</span><span class="fu">#</span> y <span class="ot">-&gt;</span>
-                <span class="dt">GHC.Types.I</span><span class="fu">#</span> (<span class="fu">GHC.Prim.+#</span> sum y))
-            (<span class="fu">GHC.Prim.+#</span> count <span class="dv">1</span><span class="fu">#</span>)
-            xs
-<span class="fu">...</span></code></pre></div>
-<p>Note that the <code>RunningTotal</code> box is completely gone. That’s due to GHC optimizing away repeated boxing and unboxing in its <a href="http://www.cs.nott.ac.uk/~pszgmh/wrapper-extended.pdf">worker/wrapper transformation</a>, which is the pass that profits most significantly from strictness information. Without strictness analysis, no unboxing happens, even if you annotate bindings with bangs or activate <code>-XStrict</code>.</p>
-<p>All 80MB of remaining allocation (we measured this above) are due to the list of integers. We can do better by recognizing the fold pattern in <code>go</code> and make use of <code>foldl</code> (that’s right, it even works with the lazy one!), which takes part in list fusion since GHC 7.10:</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE BangPatterns #-}</span>
-
-<span class="kw">data</span> <span class="dt">RunningTotal</span> <span class="fu">=</span> <span class="dt">RunningTotal</span>
-  {<span class="ot"> sum   ::</span> <span class="dt">Int</span>
-  ,<span class="ot"> count ::</span> <span class="dt">Int</span>
-  }
-
-<span class="ot">printAverage ::</span> <span class="dt">RunningTotal</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
-printAverage (<span class="dt">RunningTotal</span> <span class="fu">!</span>sum count)
-  <span class="fu">|</span> count <span class="fu">==</span> <span class="dv">0</span> <span class="fu">=</span> error <span class="st">&quot;Need at least one value!&quot;</span>
-  <span class="fu">|</span> otherwise <span class="fu">=</span> print (fromIntegral sum <span class="fu">/</span> fromIntegral<span class="ot"> count ::</span> <span class="dt">Double</span>)
-
-<span class="ot">printListAverage ::</span> [<span class="dt">Int</span>] <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
-printListAverage <span class="fu">=</span> printAverage <span class="fu">.</span> foldl f (<span class="dt">RunningTotal</span> <span class="dv">0</span> <span class="dv">0</span>)
-  <span class="kw">where</span>
-    f (<span class="dt">RunningTotal</span> sum count) x <span class="fu">=</span> <span class="dt">RunningTotal</span> (sum <span class="fu">+</span> x) (count <span class="fu">+</span> <span class="dv">1</span>)
-    
-<span class="ot">main ::</span> <span class="dt">IO</span> ()
-main <span class="fu">=</span> printListAverage [<span class="dv">1</span><span class="fu">..</span><span class="dv">1000000</span>]</code></pre></div>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">$ <span class="ex">stack</span> --resolver=nightly-2017-12-01 ghc -- -O2 average.hs <span class="kw">&amp;&amp;</span> <span class="ex">./average</span> +RTS -s
-<span class="ex">500000.5</span>
-          <span class="ex">98</span>,784 bytes allocated in the heap
-           <span class="ex">1</span>,752 bytes copied during GC
-          <span class="ex">42</span>,856 bytes maximum residency (1 sample(s))
-          <span class="ex">26</span>,776 bytes maximum slop
-               <span class="ex">2</span> MB total memory in use (0 MB lost due to fragmentation)
-<span class="ex">...</span>
-<span class="ex">INIT</span>    time    0.000s  (  0.000s elapsed)
-<span class="ex">MUT</span>     time    0.000s  (  0.002s elapsed)
-<span class="ex">GC</span>      time    0.000s  (  0.000s elapsed)
-<span class="ex">EXIT</span>    time    0.000s  (  0.000s elapsed)
-<span class="ex">Total</span>   time    0.000s  (  0.003s elapsed)</code></pre></div>
-<p>That’s only 3ms (from 9ms earlier), and allocations have completely vanished! Let’s look at the Core output:</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">Main.main_<span class="fu">$</span>s<span class="fu">$</span>wgo [<span class="dt">Occ</span><span class="fu">=</span><span class="dt">LoopBreaker</span>]
-<span class="ot">  ::</span> <span class="dt">GHC.Prim.Int</span><span class="fu">#</span> <span class="ot">-&gt;</span> <span class="dt">GHC.Prim.Int</span><span class="fu">#</span> <span class="ot">-&gt;</span> <span class="dt">GHC.Prim.Int</span><span class="fu">#</span> <span class="ot">-&gt;</span> <span class="dt">RunningTotal</span>
-[<span class="dt">GblId</span>, <span class="dt">Arity</span><span class="fu">=</span><span class="dv">3</span>, <span class="dt">Caf</span><span class="fu">=</span><span class="dt">NoCafRefs</span>, <span class="dt">Str</span><span class="fu">=&lt;</span><span class="dt">L</span>,<span class="dt">U</span><span class="fu">&gt;&lt;</span><span class="dt">L</span>,<span class="dt">U</span><span class="fu">&gt;&lt;</span><span class="dt">S</span>,<span class="dv">1</span><span class="fu">*</span><span class="dt">U</span><span class="fu">&gt;</span>m]
-Main.main_<span class="fu">$</span>s<span class="fu">$</span>wgo
-  <span class="fu">=</span> \ (<span class="ot">sc_s4sk ::</span> <span class="dt">GHC.Prim.Int</span><span class="fu">#</span>)
-      (<span class="ot">sc1_s4sj ::</span> <span class="dt">GHC.Prim.Int</span><span class="fu">#</span>)
-      (<span class="ot">sc2_s4si ::</span> <span class="dt">GHC.Prim.Int</span><span class="fu">#</span>) <span class="ot">-&gt;</span>
-      <span class="kw">case</span> sc2_s4si <span class="kw">of</span> wild_X1h {
-        __DEFAULT <span class="ot">-&gt;</span>
-          Main.main_<span class="fu">$</span>s<span class="fu">$</span>wgo
-            (<span class="fu">GHC.Prim.+#</span> sc_s4sk <span class="dv">1</span><span class="fu">#</span>)
-            (<span class="fu">GHC.Prim.+#</span> sc1_s4sj wild_X1h)
-            (<span class="fu">GHC.Prim.+#</span> wild_X1h <span class="dv">1</span><span class="fu">#</span>);
-        <span class="dv">1000000</span><span class="fu">#</span> <span class="ot">-&gt;</span>
-          <span class="dt">Main.RunningTotal</span>
-            (<span class="dt">GHC.Types.I</span><span class="fu">#</span> (<span class="fu">GHC.Prim.+#</span> sc1_s4sj <span class="dv">1000000</span><span class="fu">#</span>))
-            (<span class="dt">GHC.Types.I</span><span class="fu">#</span> (<span class="fu">GHC.Prim.+#</span> sc_s4sk <span class="dv">1</span><span class="fu">#</span>))
-      }</code></pre></div>
-<p>Amazing! No boxing happening at all. That should be enough to reach C level performance, given a good compiler backend. The takeaway is that using <code>foldl</code> is great as long as list fusion kicks in, but better err on the safe side and use the strict <code>foldl'</code> when we expect strictness anyway.</p>
-<h2 id="summary">Summary</h2>
-<p>This post tried to demonstrate how to debug strictness in the face of compiler optimizations to achieve minimal time and space footprints. For that, we re-enacted how the compiler analyzes strictness properties of functions, to eventually pin down the subtle culprit in <code>printAverage</code>. This kind of debugging is only possible through having a rough idea of strictness analysis and reading relevant GHC Core fragments and as such only makes sense with optimizations activated.</p>
-<p>Of course, library writers have good reason to sprinkle bang patterns more liberally: They need to guarantee that the maximum residency stays as low as possible for snappy <code>-O0</code> performance. That’s what experimentally placing bang patterns at accumulators is good for: Keeping the maximum residency at a minimum, so that time spent on GC is as low as possible. It’s <em>not</em> good for teaching GHC what to unbox (e.g. reducing total allocations by more than a constant factor), as that doesn’t happen anyway at <code>-O0</code>. And as soon as optimizations kick in, strictness analysis is mostly smart enough to figure things out by itself.</p>
-<p>The next part of this series will implement a strictness analysis with the help of <a href="https://github.com/sgraf812/datafix"><code>datafix</code></a>, a new library of mine for writing static analyses.</p>
-<p>Finally, some links for further reading:</p>
-<ul>
-<li><a href="http://blog.ezyang.com/2011/05/anatomy-of-a-thunk-leak/">Edward Yang: Anatomy of a thunk leak (2011)</a></li>
-<li><a href="https://donsbot.wordpress.com/2008/05/06/write-haskell-as-fast-as-c-exploiting-strictness-laziness-and-recursion/">Don Stewart: Write Haskell as fast as C (2008)</a></li>
-<li><a href="https://wiki.haskell.org/Performance/Strictness#Strictness_analysis">Haskell Wiki on Strictness (Analysis)</a></li>
-</ul>
-<p><b id="f1">1</b> That’s actually a bit simplified, as the real signature is <code>&lt;B,_&gt;&lt;B,_&gt;</code>, where <code>B</code> denotes a <em>hyperstrict</em> demand as explained on <a href="https://ghc.haskell.org/trac/ghc/wiki/Commentary/Compiler/Demand">the wiki page</a>. <a href="#a1">↩</a></p>]]></summary>
-</entry>
-<entry>
-    <title>Hakyll Code Highlighting Themes</title>
-    <link href="https://sgraf812.github.io//blog/2017-12-03-hakyll-highlighting-themes.html" />
-    <id>https://sgraf812.github.io//blog/2017-12-03-hakyll-highlighting-themes.html</id>
-    <published>2017-12-03T00:00:00Z</published>
-    <updated>2017-12-03T00:00:00Z</updated>
-    <summary type="html"><![CDATA[<p>As <a href="https://jaspervdj.be/hakyll/tutorials/faq.html#does-hakyll-support-syntax-highlighting"><code>Hakyll</code>s FAQ</a> points out, in order to have source code highlighting for your blog, you need appropriate CSS markup. It would be convenient if one could choose from the wealth of themes out there, but the existing pygments styles don’t seem to work any longer.</p>
-<!--more-->
-<p>That’s probably because <a href="https://hackage.haskell.org/package/pandoc"><code>pandoc</code></a> has since deprecated <a href="https://hackage.haskell.org/package/highlighting-kate"><code>highlighting-kate</code></a> in favor of <a href="https://hackage.haskell.org/package/skylighting"><code>skylighting</code></a>, which adopts a different CSS naming convention, thus invalidating all prior CSS themes.</p>
-<p><code>skylighting</code> has a console app for highlighting code, but it doesn’t seem to be able to just dump CSS files for its rich style database. Fortunately, we can just pick from one of the <a href="https://hackage.haskell.org/package/skylighting-0.4.4.1/docs/Skylighting-Styles.html">pre-defined styles</a> and generate the CSS with a GHCi two-liner:</p>
-<div class="sourceCode"><pre class="sourceCode css"><code class="sourceCode css">$ stack --resolver=nightly-2017-12-01 --install-ghc install skylighting
-<span class="fl">...</span>
-$ stack --resolver=nightly-2017-12-01 ghci
-<span class="fl">...</span>
-Prelude&gt; import Skylighting
-Prelude Skylighting&gt; writeFile <span class="st">&quot;zenburn.css&quot;</span> $ styleToCss zenburn
-Prelude Skylighting&gt; ^D
-$ cat zenburn<span class="fl">.css</span>
-div<span class="fl">.sourceLine</span>, a<span class="fl">.sourceLine</span> <span class="kw">{</span> <span class="kw">display:</span> <span class="dt">inline-block</span><span class="kw">;</span> <span class="kw">min-height:</span> <span class="dt">1.25em</span><span class="kw">;</span> <span class="kw">}</span>
-a<span class="fl">.sourceLine</span> <span class="kw">{</span> <span class="kw">pointer-events:</span> <span class="dt">none</span><span class="kw">;</span> <span class="kw">color:</span> <span class="dt">inherit</span><span class="kw">;</span> <span class="kw">text-decoration:</span> <span class="dt">inherit</span><span class="kw">;</span> <span class="kw">}</span>
-<span class="fl">.sourceCode</span> <span class="kw">{</span> <span class="kw">overflow:</span> <span class="dt">visible</span><span class="kw">;</span> <span class="kw">}</span>
-code<span class="fl">.sourceCode</span> <span class="kw">{</span> <span class="kw">white-space:</span> <span class="dt">pre</span><span class="kw">;</span> <span class="kw">}</span>
-<span class="dv">@media</span> <span class="dv">print {</span>
-code<span class="fl">.sourceCode</span> <span class="kw">{</span> <span class="kw">white-space:</span> <span class="dt">pre-wrap</span><span class="kw">;</span> <span class="kw">}</span>
-div<span class="fl">.sourceLine</span>, a<span class="fl">.sourceLine</span> <span class="kw">{</span> <span class="kw">text-indent:</span> <span class="dt">-1em</span><span class="kw">;</span> <span class="kw">padding-left:</span> <span class="dt">1em</span><span class="kw">;</span> <span class="kw">}</span>
-<span class="dv">}</span>
-pre<span class="fl">.numberSource</span> div<span class="fl">.sourceLine</span>, <span class="fl">.numberSource</span> a<span class="fl">.sourceLine</span>
-  <span class="kw">{</span> <span class="kw">position:</span> <span class="dt">relative</span><span class="kw">;</span> <span class="kw">}</span>
-<span class="fl">...</span></code></pre></div>
-<p>With a little more effort, you could probably access <code>skylighting</code>s whole style database, but I’m currently satisfied with the style I installed.</p>]]></summary>
-</entry>
-
-</feed>
+</html>
