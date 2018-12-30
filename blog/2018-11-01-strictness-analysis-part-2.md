@@ -1,14 +1,21 @@
 ---
 title: All About Strictness Analysis (part 2)
 tags: haskell strictness analysis
-excerpt: TODO
 ---
 
-Phew, quite some time passed since [part 1](http://fixpt.de/blog/2017-12-04-strictness-analysis-part-1.html)!
-At the end of the last post, I made a promise to implement a strictness
-analysis à la GHC with you, so enjoy!
+Welcome back! At the end of [part 1](/blog/2017-12-04-strictness-analysis-part-1.html)
+from December 4<sup id="a1"><a href="#f1">1</a></sup>, I made a promise to implement
+a strictness analysis à la GHC with you.
+
+Why would this be useful? In the last post, I argued that a rough
+understanding of how strictness analysis works helps to debug and identify the
+actual causes of missed unboxing opportunities and fix them with minimal effort.
+
+So here it is, enjoy!
 
 <!--more-->
+
+---
 
 Since this is a literate markdown file, we need to get the boring preamble out of the way.
 
@@ -18,6 +25,7 @@ Since this is a literate markdown file, we need to get the boring preamble out o
 
 module Strictness where
 
+import Prelude hiding (const)
 import Algebra.Lattice
 import Control.Monad
 import Data.Map.Strict (Map)
@@ -27,7 +35,7 @@ import Data.Maybe (fromMaybe, mapMaybe)
 import Debug.Trace
 ```
 
-# Syntax
+## Syntax
 
 Compared to GHC's Core IR, we will have a simpler, untyped core calculus with
 `let` bindings and if/then/else (instead of full-blown case expressions).
@@ -65,21 +73,21 @@ to actually implement the analysis, just in case you felt
 overwhelmed when looking at the scroll bar after scrolling the first time :).
 I'll remind you to take a break later on.
 
-# Lattice
+## Lattice
 
 For brevity, we will not include strictness on tuple components
 (resp. record fields), because that would blow up this blog post too much.
 But know that this approach extends straight-forwardly to records.
 
-## Strictness signatures
+### Strictness signatures
 
 Without nested strictness on product types, is there even anything useful
 to analyse for? Yes, there is! We can still record if a variable was evaluated
 at all. There's `const`, for example:
 
 ```haskell
-const_ :: a -> b -> a
-const_ a b = a
+const :: a -> b -> a
+const a b = a
 ```
 
 `const` is strict in its first argument and lazy in its second. That's easy
@@ -89,7 +97,7 @@ So, in the language of GHC's demand signatures, we want to summarise `const` by
 every call site of `const` to approximate the strictness behavior of `const`
 without having to repeatedly analyse its right-hand side during analysis.
 
-## Call demands
+### Call demands
 
 Fair enough, but what about a function like `twice`?
 
@@ -117,11 +125,11 @@ otherwise. E.g., under the assumption of head-strictness, a call like
 
 Note that `twice` differs from `const` in that it puts the *result*
 of applying `f` to one argument under head-strictness. In GHC's strictness
-language, this corresponds to a /call demand/ of `C(S)`. This is a strictly
+language, this corresponds to a *call demand* of `S(S)`. This is a strictly
 stronger demand than `S`, the demand `const` puts on its first argument.
 
 This has an important effect on our earlier `twice (\x -> x + n) m` example.
-Knowing that the lambda expression is put under strictness demand `C(S)`,
+Knowing that the lambda expression is put under strictness demand `S(S)`,
 it is suddenly possible for the analysis to look inside the lambda
 abstraction, paying with the outer call component to discharge the remaining
 `S` demand on the lambda body. In this way, the analysis detects that the
@@ -134,7 +142,7 @@ strictness than `L`. This corresponds to our intuition that, relative
 to a single evaluation (to head normal form) of our expression, the
 lambda body may or may not be evaluated.
 
-## Free variables
+### Free variables
 
 You may have noticed that we didn't really define yet what it means for
 a variable to be strict in some expression in which it occurs free.
@@ -156,7 +164,10 @@ are actually talking about strictness properties of the function
 Our analysis will track free variables in an extra *environment*, mapping
 `Name`s to the strictness demand they are put under.
 
-## Putting everything together
+Now might be a good time to take a short break (think part 2½). Or just keep
+reading while the above discussion is still fresh in your mind.
+
+### Putting the lattice together
 
 Alright, so now we have everything in place to denote Haskell expressions
 in terms of their strictness properties.
@@ -178,13 +189,13 @@ data Strictness
 instance Show Strictness where
   show Lazy = "L"
   show (Strict 0) = "S"
-  show (Strict n) = "C(" ++ show (Strict (n-1)) ++ ")"
+  show (Strict n) = "S(" ++ show (Strict (n-1)) ++ ")"
   show HyperStrict = "B"
 ```
 
 The `Show` instance tries to adhere to GHC's syntax. You can see how call
-demands `C(_)` and regular strictness `S` could be elegantly unified in this
-formulation. I sneaked in another constructor, `HyperStrict`. You can think of
+demands `S(_)` and regular strictness `S` could be elegantly unified in this
+formulation. I snuck in another constructor, `HyperStrict`. You can think of
 it as the strongest strictness possible. In our case, that corresponds to a call
 with infinite arity.
 
@@ -245,7 +256,7 @@ instance BoundedJoinSemiLattice Strictness where
   bottom = HyperStrict
 ```
 
-There's some more boilerplate ahead for the dual semi lattice, defining
+There's some more boilerplate ahead for the dual semilattice, defining
 the *greatest lower bound* or *meet* or *infimum* operator and an
 associated top element:
 
@@ -261,12 +272,12 @@ instance BoundedMeetSemiLattice Strictness where
   top = Lazy
 ```
 
-By the way, the syntactic resemblence to boolean operators or is no
+By the way, the syntactic resemblence to boolean operators is no
 accident: In fact, the boolean algebra itself
 [is a very special kind of lattice](https://en.wikipedia.org/wiki/Boolean_algebra_(structure)).
 
 Where would this be useful? If you squint a little and call the meet
-operator 'both', you can denote sequential composition with this.
+operator 'both' (for now), you can denote sequential composition with this.
 
 Consider ``if b `seq` True then b 42 else 1``. What strictness does
 this place on `b`? Earlier, we used the join operator to combine
@@ -285,6 +296,8 @@ tracking the strictness demands on its free variables upon being
 put under a certain (i.e. head-strict) evaluation demand:
 
 ```haskell
+-- | A total map (a /function/) from @k@ to @v@ with useful
+-- lattice instances.
 data TotalMap k v
   = TotalMap
   { def :: !v
@@ -292,14 +305,25 @@ data TotalMap k v
   } deriving (Eq, Show)
 
 lookupTM :: Ord k => k -> TotalMap k v -> v
+insertTM :: (Ord k, Eq v) => k -> v -> TotalMap k v -> TotalMap k v
+deleteTM :: Ord k => k -> TotalMap k v -> TotalMap k v
+
+type StrEnv = TotalMap Name Strictness
+```
+
+Such a `StrEnv` is just a total map from `Name`s to `Strictness`.
+We can just use its point-wise lattice instance and be done with it.
+<details>
+  <summary>Boring implementations and lattice instances</summary>
+
+```haskell
 lookupTM n env =
   fromMaybe (def env) (Map.lookup n (points env))
 
-insertTM :: Ord k => k -> v -> TotalMap k v -> TotalMap k v
-insertTM n s env =
-  env { points = Map.insert n s (points env) }
+insertTM n s env
+  | s == def env = env { points = Map.delete n (points env) }
+  | otherwise    = env { points = Map.insert n s (points env) }
 
-deleteTM :: Ord k => k -> TotalMap k v -> TotalMap k v
 deleteTM n env =
   env { points = Map.delete n (points env) }
 
@@ -323,13 +347,9 @@ instance (Ord k, Eq v, MeetSemiLattice v) => MeetSemiLattice (TotalMap k v) wher
 
 instance (Ord k, Eq v, BoundedMeetSemiLattice v) => BoundedMeetSemiLattice (TotalMap k v) where
   top = TotalMap top Map.empty
-
-type StrEnv = TotalMap Name Strictness
 ```
 
-Normally, we'd implement this as a `newtype`d `Map`, but here in
-order to keep the post short we just alias to the pointwise
-lattice on `Name -> l` (i.e. ``(env1 \/ env2) n = env1 n\/ env2 n``).
+</details>
 
 This is enough vocabulary to analyse simple expressions. But, as
 discussed above, we need argument strictness to express how a
@@ -398,7 +418,7 @@ data StrType
   } deriving (Eq, Show)
 
 instance JoinSemiLattice StrType where
-  (StrType fvs1 args1) \/ (StrType fvs2 args2) =
+  StrType fvs1 args1 \/ StrType fvs2 args2 =
     StrType (fvs1 \/ fvs2) (args1 \/ args2)
 
 instance BoundedJoinSemiLattice StrType where
@@ -408,7 +428,7 @@ instance BoundedJoinSemiLattice StrType where
 -- but it's the dual to the 'JoinSemiLattice' instance.
 -- We mostly need this for 'top'.
 instance MeetSemiLattice StrType where
-  (StrType fvs1 args1) /\ (StrType fvs2 args2) =
+  StrType fvs1 args1 /\ StrType fvs2 args2 =
     StrType (fvs1 /\ fvs2) (args1 /\ args2)
 
 instance BoundedMeetSemiLattice StrType where
@@ -457,10 +477,10 @@ type Arity = Int
 type SigEnv = Map Name (Arity, StrType)
 ```
 
-Any strictness signature is only valid when a certain number of arguments
-is reached. We store this *arity* (as in unary, binary, etc.) alongside
-the strictness signature. Generally, assuming a higher arity can lead to
-more precise strictness signatures, but applies to less call sites.
+Any strictness signature is only valid when a certain number of incoming
+arguments is reached. We store this *arity* (as in unary, binary, etc.)
+alongside the strictness signature. Generally, assuming a higher arity can lead
+to more precise strictness signatures, but applies to less call sites.
 GHC will only analyse each function once and assume an incoming strictness
 demand correspond to manifest arity of the function, e.g. the number of
 top-level lambdas in the RHS of the function's definition.
@@ -472,10 +492,9 @@ manifestArity (Lam _ e) = 1 + manifestArity e
 manifestArity _ = 0
 ```
 
-That's it! What follows are some auxiliary definitions
-that you can look up as needed:
+That's it for the lattice! Have a break and enter part 3...
 
-# Analysis
+## Analysis
 
 Let's define the main analysis function for our core calculus:
 
@@ -497,7 +516,7 @@ expr sigs incomingArity = \case
 ```
 
 `analyse` immediately delegates to a more complicated auxiliary function.
-We'll first look at the `If` case here: If will sequentially combine
+We'll first look at the `If` case here: `If` will sequentially combine
 ('both') the analysis results from analysing the condition under incoming
 arity 0 with the result of joining the analysis results of both branches
 with the arity that came in from outside. Very much what we would expect
@@ -510,7 +529,7 @@ after our reasoning above!
       (argStr, fTy') = overArgs unconsArgStr fTy
       aTy =
         case argStr of
-          -- bottom = unbounded arity, only possible constrained by the type
+          -- bottom = unbounded arity, only possibly constrained by the type
           -- of `a`, which we don't look at here.
           HyperStrict -> expr sigs maxBound a
           Strict n -> expr sigs n a
@@ -524,9 +543,9 @@ while the argument is only evaluated if it was put under a strict context.
 This is determined by examining the strictness type of analysing `f`.
 
 The resulting types are sequentially combined ('both').
-Note that `bothStrType` is right-biased and will pass on the argument strictness
-from `fTy`, which is exactly what we want. This will get clearer once we examine
-the variable case.
+Note that `bothStrType` is right-biased and will pass on the argument
+strictness from `fTy'`, which is exactly what we want. This will get clearer
+once we examine the variable case.
 
 ```haskell
   Lam n body ->
@@ -546,7 +565,7 @@ out of arity to feed it, we are not allowed to use analysis results from the bod
 The only sensible thing to assume is a `top` strictness type in that case.
 
 The call to `peelFV` will abstract out the strictness on the argument and we finally
-cons that strictness onto the argument strictness of the labmda body's strictness
+cons that strictness onto the argument strictness of the lambda body's strictness
 type. Consider what happens for an expression like `\f -> f a`: The lambda body
 puts its free variable `f` under strictness `Strict 1`, so when we abstract over
 `f`, we remove it from `fvs` and cons it to the lambdas argument strictness instead.
@@ -566,9 +585,9 @@ if any of the guards fail. The resulting signature is combined with
 a unit strictness type just for this particular call site.
 
 A call to `const` with two arguments (so `arity == 2` when we hit the variable)
-would pass the arity check and return the `<S,_><L,_>` signature from above.
-The application case at any call site would then unleash the proper argument
-strictness on the concrete argument expressions.
+would pass the arity check and return the `<S,_><L,_>` (resp. `S,L,..` in our
+syntax) signature from above. The application case at any call site would then
+unleash the proper argument strictness on the concrete argument expressions.
 
 What remains is handling let-bindings. Let's look at the non-recursive case first:
 
@@ -596,7 +615,7 @@ Fair enough, now onto the recursive case. Typically, this is the case where stat
 analyses
 [have to yield approximate results in order to stay decidable](https://en.wikipedia.org/wiki/Rice%27s_theorem).
 Typically, this is achieved through calculating the least fixed-point of the
-transfer function wrt. to the analysis lattice. Strictness analysis is not
+transfer function wrt. to the analysis lattice. Strictness analysis is no
 different in that regard:
 
 ```haskell
@@ -608,7 +627,7 @@ different in that regard:
     in bodyTy'
 ```
 
-That wasn't so hard! It seems that a few more bindings were abstracted into
+That wasn't so hard! It seems that a few more functions were abstracted into
 `fixBinds`, which is responsible for finding a set of sound strictness
 signatures for the binding group. Let's see what else hides in `fixBinds`:
 
@@ -670,6 +689,103 @@ We compute iterated approximations of the signature environment until we hit
 the fixed-point, at which point we have a sound approximation of program
 semantics.
 
----
+## Test-drive
 
 Phew! That's it. Let's put our function to work.
+
+```haskell
+a, b, c, f :: Expr
+(a:b:c:_:_:f:_) = map (Var . (:[])) ['a'..]
+
+exprs :: [Expr]
+exprs =
+  [ If a b c
+  , If a b b
+  , If a (App f b) (App f c)
+  , App (Lam "b" b) a
+  , Let (NonRec ("f", Lam "b" b)) (App f a)
+  , Let (Rec [("f", Lam "b" (App f b))]) (App f a)
+  , Let (Rec [("f", Lam "b" (If b c (App f b)))]) (App f a)
+  ]
+
+main = forM_ exprs $ \e -> do
+  print e
+  print (analyse e)
+  putStrLn ""
+```
+
+This is its output:
+
+```unknown
+If (Var "a") (Var "b") (Var "c")
+StrType {fvs = TotalMap {def = L, points = fromList [("a",S)]}, args = L,L..}
+
+If (Var "a") (Var "b") (Var "b")
+StrType {fvs = TotalMap {def = L, points = fromList [("a",S),("b",S)]}, args = L,L..}
+
+If (Var "a") (App (Var "f") (Var "b")) (App (Var "f") (Var "c"))
+StrType {fvs = TotalMap {def = L, points = fromList [("a",S),("f",S(S))]}, args = L,L..}
+
+App (Lam "b" (Var "b")) (Var "a")
+StrType {fvs = TotalMap {def = L, points = fromList [("a",S)]}, args = L,L..}
+
+Let (NonRec ("f",Lam "b" (Var "b"))) (App (Var "f") (Var "a"))
+StrType {fvs = TotalMap {def = L, points = fromList [("a",S)]}, args = L,L..}
+
+Let (Rec [("f",Lam "b" (App (Var "f") (Var "b")))]) (App (Var "f") (Var "a"))
+StrType {fvs = TotalMap {def = B, points = fromList []}, args = B,B..}
+
+Let (Rec [("f",Lam "b" (If (Var "b") (Var "c") (App (Var "f") (Var "b"))))]) (App (Var "f") (Var "a"))
+StrType {fvs = TotalMap {def = L, points = fromList [("a",S),("c",S)]}, args = L,L..}
+```
+
+The first two test-cases are concerned with testing the `If` case.
+The next two expressions test `App`lications and `Lam`das, most importantly
+correct handling of incoming arity. Note how this correctly infers that `a`
+was used strictly in the fourth example. What follows is a non-recursive
+let-binding, basically doing the same as the fourth expression.
+
+The last two expressions show-case what this simple analysis is able to infer.
+First, there's a nonterminating `let f b = f b in f a` which is correctly
+denoted by `bot`tom. This already hints that our analysis is able carry out some
+inductive reasoning.
+The last example then analyses `let f b = if b then c else f b in f a` to find
+out that both `a` and `c` are used strictly. Cool!
+
+## Conclusion
+
+We defined a projection-based strictness analysis in the style of GHC that
+actually finds out useful things about our code!
+
+I hope that in doing so, you got a feeling about what GHC can and cannot derive
+about the performance critical code you write. Specifically, looking back at
+the problem in [part 1](/blog/2017-12-04-strictness-analysis-part-1.html), you
+should now be able to see why we needed a bang in `printAverage` and how that
+enables GHC to infer that the accumulator can be completely unboxed. This is
+just by mechanically following the analysis rules above!
+
+Granted, there are many details in which GHC's demand analyser (which does
+strictness analysis) differs from the analysis above:
+
+- Local, non-recursive thunk bindings have a different analysis rule than
+  functions
+- We ignore product demands like `S(LS(S))` for simplicity, but it's
+  straight-forward to extend
+- Various hacks and special cases that you can ignore in 95% of all cases
+
+If you want to know more about these details, read the following papers:
+
+- [Complete, but dated report on the demand analyser](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/08/demand.pdf). This is probably the best paper for having an overview of what GHC does today in 95% of all cases.
+- [Incomplete, but recent report on the demand analyser](https://www.microsoft.com/en-us/research/wp-content/uploads/2017/03/demand-jfp-draft.pdf)
+- [Complete, recent report on usage analysis (dual to strictness) within the demand analyser](https://www.microsoft.com/en-us/research/wp-content/uploads/2014/01/cardinality-popl14.pdf)
+
+I agree if you say that the documentation story is a little insatisfying.
+Anyway, the ultimate reference is always the code of
+[the demand analyser within GHC itself](https://gitlab.haskell.org/ghc/ghc/blob/master/compiler/stranal/DmdAnal.hs).
+
+If/when I come around to it, I can finally pitch you my
+[`datafix` library](https://hackage.haskell.org/package/datafix) for computing
+fixed-points like we just did in a more principled way.
+So stay stuned for part 4 :)
+
+<b id="f1">1</b> ... 2017<a href="#a1">↩</a>
