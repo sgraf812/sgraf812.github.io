@@ -10,7 +10,7 @@ analysis à la GHC with you, so enjoy!
 
 <!--more-->
 
-Since this is a literate Haskell file, we need to get the boring preamble out of the way.
+Since this is a literate markdown file, we need to get the boring preamble out of the way.
 
 ```haskell
 {-# LANGUAGE LambdaCase #-}
@@ -22,6 +22,9 @@ import Algebra.Lattice
 import Control.Monad
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import qualified Data.Map.Merge.Strict as Map
+import Data.Maybe (fromMaybe, mapMaybe)
+import Debug.Trace
 ```
 
 # Syntax
@@ -282,7 +285,46 @@ tracking the strictness demands on its free variables upon being
 put under a certain (i.e. head-strict) evaluation demand:
 
 ```haskell
-type StrEnv = Map Name Strictness
+data TotalMap k v
+  = TotalMap
+  { def :: !v
+  , points :: !(Map k v)
+  } deriving (Eq, Show)
+
+lookupTM :: Ord k => k -> TotalMap k v -> v
+lookupTM n env =
+  fromMaybe (def env) (Map.lookup n (points env))
+
+insertTM :: Ord k => k -> v -> TotalMap k v -> TotalMap k v
+insertTM n s env =
+  env { points = Map.insert n s (points env) }
+
+deleteTM :: Ord k => k -> TotalMap k v -> TotalMap k v
+deleteTM n env =
+  env { points = Map.delete n (points env) }
+
+joinOrMeet :: (Eq v, Ord k) => (v -> v -> v) -> TotalMap k v -> TotalMap k v -> TotalMap k v
+joinOrMeet (/\/) (TotalMap def1 ps1) (TotalMap def2 ps2) = TotalMap def ps
+  where
+    def = def1 /\/ def2
+    filterMaybe f a = a <$ guard (f a)
+    mmc f = Map.mapMaybeMissing (\_ -> filterMaybe (/= def) . f)
+    zmmc f = Map.zipWithMaybeMatched (\_ a -> filterMaybe (/= def) . f a)
+    ps = Map.merge (mmc (/\/ def2)) (mmc (def1 /\/)) (zmmc (/\/)) ps1 ps2
+
+instance (Ord k, Eq v, JoinSemiLattice v) => JoinSemiLattice (TotalMap k v) where
+  (\/) = joinOrMeet (\/)
+
+instance (Ord k, Eq v, BoundedJoinSemiLattice v) => BoundedJoinSemiLattice (TotalMap k v) where
+  bottom = TotalMap bottom Map.empty
+
+instance (Ord k, Eq v, MeetSemiLattice v) => MeetSemiLattice (TotalMap k v) where
+  (/\) = joinOrMeet (/\)
+
+instance (Ord k, Eq v, BoundedMeetSemiLattice v) => BoundedMeetSemiLattice (TotalMap k v) where
+  top = TotalMap top Map.empty
+
+type StrEnv = TotalMap Name Strictness
 ```
 
 Normally, we'd implement this as a `newtype`d `Map`, but here in
@@ -351,8 +393,8 @@ component of an expression's strictness type:
 ```haskell
 data StrType
   = StrType
-  { fvs  :: StrEnv
-  , args :: ArgStr
+  { fvs  :: !StrEnv
+  , args :: !ArgStr
   } deriving (Eq, Show)
 
 instance JoinSemiLattice StrType where
@@ -380,12 +422,30 @@ bothStrType (StrType fvs1 _) (StrType fvs2 args2) =
   StrType (fvs1 /\ fvs2) args2
   
 unitStrType :: Name -> Strictness -> StrType
-unitStrType n s = StrType (Map.insert n s top) top
+unitStrType n s = StrType (insertTM n s top) top
+
+overFVs :: (StrEnv -> (a, StrEnv)) -> StrType -> (a, StrType)
+overFVs f ty =
+  let (a, fvs') = f (fvs ty)
+  in (a, ty { fvs = fvs' })
+
+peelFV :: Name -> StrType -> (Strictness, StrType)
+peelFV n = overFVs $ \fvs ->
+  (lookupTM n fvs, deleteTM n fvs)
+
+modifyFVs :: (StrEnv -> StrEnv) -> StrType -> StrType
+modifyFVs f = snd . overFVs (\a -> ((), f a))
+
+deleteFV :: Name -> StrType -> StrType
+deleteFV = modifyFVs . deleteTM
 
 overArgs :: (ArgStr -> (a, ArgStr)) -> StrType -> (a, StrType)
 overArgs f ty =
   let (a, args') = f (args ty)
   in (a, ty { args = args' })
+
+modifyArgs :: (ArgStr -> ArgStr) -> StrType -> StrType
+modifyArgs f = snd . overArgs (\a -> ((), f a))
 ```
 
 So, strictness environment for free variables, argument strictness for
@@ -427,13 +487,13 @@ We analyse an expression to find out what strictness it puts its free
 variables under if put under head-demand:
 
 ```haskell
-analyse = expr emptySigEnv 0
+analyse = expr Map.empty 0
 
 expr :: SigEnv -> Arity -> Expr -> StrType
 expr sigs incomingArity = \case
   If b t e ->
     expr sigs 0 b `bothStrType`
-      expr sigs incomingArity t \/ expr sigs incomingArity e
+      (expr sigs incomingArity t \/ expr sigs incomingArity e)
 ```
 
 `analyse` immediately delegates to a more complicated auxiliary function.
@@ -456,7 +516,7 @@ after our reasoning above!
           Strict n -> expr sigs n a
           -- `a` is possibly not evaluated at all, so nothing to see there
           Lazy -> top
-    in aTy `bothStrType` fTy
+    in aTy `bothStrType` fTy'
 ```
 
 In an application, the head will be analysed with an incremented incoming arity,
@@ -494,7 +554,7 @@ puts its free variable `f` under strictness `Strict 1`, so when we abstract over
 ```haskell
   Var n ->
     let sig = fromMaybe top $ do
-          (arity, sig) <- sigs n
+          (arity, sig) <- Map.lookup n sigs
           guard (arity <= incomingArity)
           pure sig
     in bothStrType (unitStrType n (Strict incomingArity)) sig
@@ -513,14 +573,14 @@ strictness on the concrete argument expressions.
 What remains is handling let-bindings. Let's look at the non-recursive case first:
 
 ```haskell
-  Let (NonRec name rhs) body ->
+  Let (NonRec (name, rhs)) body ->
     let
       arity = manifestArity rhs
       rhsTy = expr sigs arity rhs
-      sigs' = extendEnv name (Just (arity, rhsTy)) sigs
+      sigs' = Map.insert name (arity, rhsTy) sigs
       bodyTy = expr sigs' incomingArity body
       -- Normally, we would store how 'name' was used in the body somewhere
-      (_, bodyTy') = peelFV name bodyTy
+      bodyTy' = deleteFV name bodyTy
     in bodyTy'
 ```
 
@@ -544,7 +604,7 @@ different in that regard:
     let
       sigs' = fixBinds sigs binds
       bodyTy = expr sigs' incomingArity body
-      (_, bodyTy') = peelFVs (map snd binds) bodyTy
+      bodyTy' = foldr deleteFV bodyTy (map fst binds)
     in bodyTy'
 ```
 
@@ -554,13 +614,16 @@ signatures for the binding group. Let's see what else hides in `fixBinds`:
 
 ```haskell
 fixBinds :: SigEnv -> [(Name, Expr)] -> SigEnv
-fixBinds sigs binds = toSigEnv stableTypes sigs
+fixBinds sigs binds = toSigEnv stableTypes
   where
-    toSigEnv :: [(Arity, StrType)] -> SigEnv -> SigEnv
-    toSigEnv = foldr (\((n, _), ty) sigs -> extendEnv n ty) sigs . zip binds
+    names :: [Name]
+    names = map fst binds
+
+    toSigEnv :: [(Arity, StrType)] -> SigEnv
+    toSigEnv = foldr (\(n, ty) -> Map.insert n ty) sigs . zip names
 
     fromSigEnv :: SigEnv -> [(Arity, StrType)]
-    fromSigEnv sigs = map (sigs . fst) binds
+    fromSigEnv sigs = mapMaybe (flip Map.lookup sigs) names
 ```
 
 We'll convert back and forth between the `SigEnv` representation and the list
@@ -571,7 +634,11 @@ for outer bindings.
 
 ```haskell
     stableTypes :: [(Arity, StrType)]
-    stableTypes = head . filter (uncurry (==)) $ zip approximations (tail approximations)
+    stableTypes =
+      fst
+      . head
+      . filter (uncurry (==))
+      $ zip approximations (tail approximations)
 
     start :: [(Arity, StrType)]
     start = map (const (0, bottom)) binds
@@ -586,14 +653,15 @@ We have found a fixed-point as soon as `approximations` becomes stable. This is
 detected by `stableTypes`, which we converted into the result of `fixBinds` above.
 
 ```haskell
-    iter tys = fromSigEnv . foldr iterBind (toSigEnv tys) binds
+    iter :: [(Arity, StrType)] -> [(Arity, StrType)]
+    iter tys = fromSigEnv (foldr iterBind (toSigEnv tys) binds)
 
     iterBind (name, rhs) sigs' =
       let
         arity = manifestArity rhs
         rhsTy = expr sigs' (manifestArity rhs) rhs
-        (_, rhsTy') = peelFVs (map fst binds) rhsTy
-      in extendEnv name (Just (arity, rhsTy')) sigs'
+        rhsTy' = foldr deleteFV rhsTy names
+      in Map.insert name (arity, rhsTy') sigs'
 ```
 
 Aha, so `iterBind` is where the logic from the non-recursive case ended up!
