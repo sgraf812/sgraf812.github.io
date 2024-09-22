@@ -21,9 +21,3 @@ executable blog
                        hakyll,
                        hakyll-sass
 
-test-suite str-anal
-  type:                exitcode-stdio-1.0
-  main-is:             Strictness.lhs
-  build-depends:       base, markdown-unlit, containers, lattices
-  ghc-options:         -pgmL markdown-unlit -main-is Strictness
-  hs-source-dirs:      tests/StrAnal

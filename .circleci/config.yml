@@ -19,7 +19,6 @@ jobs:
       - deploy:
           name: Deploy master to GitHub Pages
           command: |
-            rm -rf tests # Otherwise hakyll will try to get modification time of symlinks and crash
             git config --global user.email robots@circleci.com
             git config --global user.name CircleCI
             stack exec blog rebuild
