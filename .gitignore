@@ -2,7 +2,9 @@
 
 ### Haskell ###
 dist
+dist-newstyle
 cabal-dev
+result
 *.o
 *.hi
 *.chi
