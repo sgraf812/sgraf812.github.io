@@ -3,15 +3,13 @@ title: Home
 ---
 <section class="posts">
 $for(posts)$
-    <article>
+    <article class="post">
     <header>
-        <span class="date">$date$</span>
-        <h2><a href="$url$">$title$</h2>
+        <h1 class="post-title"><a href="$url$">$title$</a></h1>
+        <h4 class="post-date">$date$</h4>
     </header>
     <p>$excerpt$</p>
-    <ul class="actions">
-        <li><a href="$url$" class="button">Read More</a></li>
-    </ul>
+    <a href="$url$" class="button"><i>Read More ...</i></a>
     </article>
 $endfor$
 </section>
