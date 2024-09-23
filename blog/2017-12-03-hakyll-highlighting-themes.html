@@ -1,101 +1,96 @@
 <!DOCTYPE html>
-<!--
-    Massively by HTML5 UP
-    html5up.net | @ajlkn
-    Hakyll integration by Sebastian Graf
-    Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
--->
 <html lang="en">
 
 <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
 
-    <title>fixpt - Hakyll Code Highlighting Themes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 
-    <link rel="apple-touch-icon" sizes="180x180" href="../assets/icon/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="../assets/icon/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="../assets/icon/favicon-16x16.png">
-    <link rel="manifest" href="../assets/icon/manifest.json">
-    <link rel="mask-icon" href="../assets/icon/safari-pinned-tab.svg" color="#5bbad5">
-    <link rel="shortcut icon" href="../assets/icon/favicon.ico">
-    <meta name="msapplication-config" content="/assets/icon/browserconfig.xml">
-    <meta name="theme-color" content="#ffffff">
+  <title>fixpt &middot; Hakyll Code Highlighting Themes</title>
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="../assets/css/main.css" />
-    <link rel="stylesheet" href="../assets/css/pygments.css" />
+  <link rel="canonical" href="../blog/2017-12-03-hakyll-highlighting-themes.html">
+
+  <link rel="apple-touch-icon-precomposed" sizes="180x180" href="../assets/icon/apple-touch-icon.png">
+  <link rel="shortcut icon" href="../assets/icon/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/icon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../assets/icon/favicon-16x16.png">
+
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="../atom.xml">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="../assets/css/poole.css" />
+  <link rel="stylesheet" href="../assets/css/syntax.css" />
+  <link rel="stylesheet" href="../assets/css/lanyon.css" />
+  <link rel="stylesheet" href="../assets/css/custom.css" />
+  <link rel="stylesheet" href="../assets/css/pygments.css" />
+  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/linux-libertine-o">
+  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/linux-biolinum">
+  <script src="https://kit.fontawesome.com/75227a9ab1.js" crossorigin="anonymous"></script>
+
+<!--
+    <link rel="stylesheet" href="/assets/css/main.css" />
     <noscript>
-        <link rel="stylesheet" href="../assets/css/noscript.css" />
+        <link rel="stylesheet" href="/assets/css/noscript.css" />
     </noscript>
+-->
 </head>
 
 <body>
-    <div id="wrapper" class="bg">
-        <header id="header">
-            <a href="../" class="logo">fixpt</a>
-        </header>
 
-        <nav id="nav">
-            <ul class="links">
-                <li class="active">
-                    <a href="../">Blog</a>
-                </li>
-                <li class>
-                    <a href="../about.html">About</a>
-                </li>
-            </ul>
+<header class="masthead">
+  <nav class="nav-bar" role="navigation">
+    <ul class="nav-items left">
+      <li><a class="nav-item active" href="../">Blog</a>
+      </li>
+      <li><a class="nav-item " href="../about.html">About</a>
+      </li>
+    </ul>
 
-            <ul class="icons">
-                <li>
-                    <a href="https://reddit.com/user/sgraf812" class="icon fa-reddit" rel="nofollow">
-                        <span class="label">Reddit</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="https://github.com/sgraf812" class="icon fa-github" rel="nofollow">
-                        <span class="label">GitHub</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="https://twitter.com/sgraf1337" class="icon fa-twitter" rel="nofollow">
-                        <span class="label">Twitter</span>
-                    </a>
-                </li>
-            </ul>
-        </nav>
+    <ul class="nav-items center container">
+      <li class="masthead-title">
+        <a href="../" title="Home">fixpt.de</a> <small>Sebastian Graf</small>
+      </li>
+    </ul>
 
-        <div id="main">
-            <section class="post">
-  <header class="major">
-    <span class="date">December  3, 2017</span>
-    <h1>Hakyll Code Highlighting Themes</h1>
-  </header>
-  <p>As <a href="https://jaspervdj.be/hakyll/tutorials/faq.html#does-hakyll-support-syntax-highlighting"><code>Hakyll</code>s FAQ</a> points out, in order to have source code highlighting for your blog, you need appropriate CSS markup. It would be convenient if one could choose from the wealth of themes out there, but the existing pygments styles don’t seem to work any longer.</p>
+    <ul class="nav-items right">
+      <li><a href="https://github.com/sgraf812" class="fa-brands fa-github" rel="nofollow"></a></li>
+      <li><a href="https://x.com/sgraf1337" class="fa-brands fa-x-twitter" rel="nofollow"></a></li>
+      <li><a href="https://mastodon.online/@sgraf" class="fa-brands fa-mastodon" rel="nofollow"></a></li>
+      <li><a href="https://orcid.org/0000-0001-9074-9055" class="fa-brands fa-orcid" rel="nofollow"></a></li>
+    </ul>
+  </nav>
+</header>
+
+<section role="main" class="container content">
+  <div class="post">
+  <h1 class="post-title">Hakyll Code Highlighting Themes</h1>
+  <span class="post-date">December  3, 2017</span>
+  <p>As <a href="https://jaspervdj.be/hakyll/tutorials/faq.html#does-hakyll-support-syntax-highlighting"><code>Hakyll</code>s FAQ</a> points out, in order to have source code highlighting for your blog, you need appropriate CSS markup.
+It would be convenient if one could choose from the wealth of themes out there, but the existing pygments styles don’t seem to work any longer.</p>
 <!--more-->
 <p>That’s probably because <a href="https://hackage.haskell.org/package/pandoc"><code>pandoc</code></a> has since deprecated <a href="https://hackage.haskell.org/package/highlighting-kate"><code>highlighting-kate</code></a> in favor of <a href="https://hackage.haskell.org/package/skylighting"><code>skylighting</code></a>, which adopts a different CSS naming convention, thus invalidating all prior CSS themes.</p>
-<p><code>skylighting</code> has a console app for highlighting code, but it doesn’t seem to be able to just dump CSS files for its rich style database. Fortunately, we can just pick from one of the <a href="https://hackage.haskell.org/package/skylighting-0.4.4.1/docs/Skylighting-Styles.html">pre-defined styles</a> and generate the CSS with a GHCi two-liner:</p>
-<div class="sourceCode"><pre class="sourceCode css"><code class="sourceCode css">$ stack --resolver=nightly-2017-12-01 --install-ghc install skylighting
-<span class="fl">...</span>
-$ stack --resolver=nightly-2017-12-01 ghci
-<span class="fl">...</span>
-Prelude&gt; import Skylighting
-Prelude Skylighting&gt; writeFile <span class="st">&quot;zenburn.css&quot;</span> $ styleToCss zenburn
-Prelude Skylighting&gt; ^D
-$ cat zenburn<span class="fl">.css</span>
-div<span class="fl">.sourceLine</span>, a<span class="fl">.sourceLine</span> <span class="kw">{</span> <span class="kw">display:</span> <span class="dt">inline-block</span><span class="kw">;</span> <span class="kw">min-height:</span> <span class="dt">1.25em</span><span class="kw">;</span> <span class="kw">}</span>
-a<span class="fl">.sourceLine</span> <span class="kw">{</span> <span class="kw">pointer-events:</span> <span class="dt">none</span><span class="kw">;</span> <span class="kw">color:</span> <span class="dt">inherit</span><span class="kw">;</span> <span class="kw">text-decoration:</span> <span class="dt">inherit</span><span class="kw">;</span> <span class="kw">}</span>
-<span class="fl">.sourceCode</span> <span class="kw">{</span> <span class="kw">overflow:</span> <span class="dt">visible</span><span class="kw">;</span> <span class="kw">}</span>
-code<span class="fl">.sourceCode</span> <span class="kw">{</span> <span class="kw">white-space:</span> <span class="dt">pre</span><span class="kw">;</span> <span class="kw">}</span>
-<span class="dv">@media</span> <span class="dv">print {</span>
-code<span class="fl">.sourceCode</span> <span class="kw">{</span> <span class="kw">white-space:</span> <span class="dt">pre-wrap</span><span class="kw">;</span> <span class="kw">}</span>
-div<span class="fl">.sourceLine</span>, a<span class="fl">.sourceLine</span> <span class="kw">{</span> <span class="kw">text-indent:</span> <span class="dt">-1em</span><span class="kw">;</span> <span class="kw">padding-left:</span> <span class="dt">1em</span><span class="kw">;</span> <span class="kw">}</span>
-<span class="dv">}</span>
-pre<span class="fl">.numberSource</span> div<span class="fl">.sourceLine</span>, <span class="fl">.numberSource</span> a<span class="fl">.sourceLine</span>
-  <span class="kw">{</span> <span class="kw">position:</span> <span class="dt">relative</span><span class="kw">;</span> <span class="kw">}</span>
-<span class="fl">...</span></code></pre></div>
+<p><code>skylighting</code> has a console app for highlighting code, but it doesn’t seem to be able to just dump CSS files for its rich style database.
+Fortunately, we can just pick from one of the <a href="https://hackage.haskell.org/package/skylighting-0.4.4.1/docs/Skylighting-Styles.html">pre-defined styles</a> and generate the CSS with a GHCi two-liner:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode css"><code class="sourceCode css"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>$ stack --resolver=nightly-2017-12-01 --install-ghc install skylighting</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>...</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>$ stack --resolver=nightly-2017-12-01 ghci</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>...</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>Prelude<span class="op">&gt;</span> import Skylighting</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>Prelude Skylighting<span class="op">&gt;</span> writeFile &quot;zenburn<span class="fu">.css</span>&quot; $ styleToCss zenburn</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>Prelude Skylighting<span class="op">&gt;</span> ^D</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>$ cat zenburn<span class="fu">.css</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>div<span class="fu">.sourceLine</span><span class="op">,</span> a<span class="fu">.sourceLine</span> { <span class="kw">display</span><span class="ch">:</span> <span class="dv">inline-block</span><span class="op">;</span> <span class="kw">min-height</span><span class="ch">:</span> <span class="dv">1.25</span><span class="dt">em</span><span class="op">;</span> }</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>a<span class="fu">.sourceLine</span> { <span class="kw">pointer-events</span><span class="ch">:</span> <span class="dv">none</span><span class="op">;</span> <span class="kw">color</span><span class="ch">:</span> <span class="bu">inherit</span><span class="op">;</span> <span class="kw">text-decoration</span><span class="ch">:</span> <span class="bu">inherit</span><span class="op">;</span> }</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">.sourceCode</span> { <span class="kw">overflow</span><span class="ch">:</span> <span class="dv">visible</span><span class="op">;</span> }</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>code<span class="fu">.sourceCode</span> { <span class="kw">white-space</span><span class="ch">:</span> <span class="dv">pre</span><span class="op">;</span> }</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="im">@media</span> <span class="an">print</span> {</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>code<span class="fu">.sourceCode</span> { <span class="kw">white-space</span><span class="ch">:</span> <span class="dv">pre-wrap</span><span class="op">;</span> }</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>div<span class="fu">.sourceLine</span><span class="op">,</span> a<span class="fu">.sourceLine</span> { <span class="kw">text-indent</span><span class="ch">:</span> <span class="dv">-1</span><span class="dt">em</span><span class="op">;</span> <span class="kw">padding-left</span><span class="ch">:</span> <span class="dv">1</span><span class="dt">em</span><span class="op">;</span> }</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>pre<span class="fu">.numberSource</span> div<span class="fu">.sourceLine</span><span class="op">,</span> <span class="fu">.numberSource</span> a<span class="fu">.sourceLine</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  { <span class="kw">position</span><span class="ch">:</span> <span class="dv">relative</span><span class="op">;</span> }</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>...</span></code></pre></div>
 <p>With a little more effort, you could probably access <code>skylighting</code>s whole style database, but I’m currently satisfied with the style I installed.</p>
 </section>
 <div id="disqus_thread"></div>
@@ -119,76 +114,17 @@ pre<span class="fl">.numberSource</span> div<span class="fl">.sourceLine</span>,
 <noscript>Please enable JavaScript to view the
   <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
 </noscript>
-        </div>
 
-        <footer id="footer">
-            <section>
-                <form method="POST" action="https://formspree.io/sgraf1337@gmail.com">
-                    <div class="field">
-                        <label for="name">Name</label>
-                        <input type="text" name="name" id="name" />
-                    </div>
-                    <div class="field">
-                        <label for="email">Email</label>
-                        <input type="text" name="email" id="email" />
-                    </div>
-                    <div class="field">
-                        <label for="message">Message</label>
-                        <textarea name="message" id="message" rows="3"></textarea>
-                    </div>
-                    <ul class="actions">
-                        <li>
-                            <input type="submit" value="Send Message" />
-                        </li>
-                    </ul>
-                </form>
-            </section>
-            <section class="split contact">
-                <section>
-                    <h3>E-mail</h3>
-                    <p>
-                        <a href="mailto:sgraf1337@gmail.com">sgraf1337@gmail.com</a>
-                    </p>
-                </section>
-                <section>
-                    <h3>Social</h3>
-                    <ul class="icons alt">
-                        <li>
-                            <a href="https://reddit.com/user/sgraf812" class="icon fa-reddit" rel="nofollow">
-                                <span class="label">Reddit</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="https://github.com/sgraf812" class="icon fa-github" rel="nofollow">
-                                <span class="label">GitHub</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="https://twitter.com/sgraf1337" class="icon fa-twitter" rel="nofollow">
-                                <span class="label">Twitter</span>
-                            </a>
-                        </li>
-                    </ul>
-                </section>
-            </section>
-        </footer>
-        <!-- Copyright -->
-        <div id="copyright">
-            <ul>
-                <li>&copy; HTML5 UP</li>
-                <li>Design by
-                    <a href="https://html5up.net">HTML5 UP</a>
-                </li>
-                <li>Adapted from the Jekyll integration by
-                    <a href="https://somiibo.com">Somiibo</a>
-                </li>
-                <li>Powered by
-                    <a href="http://jaspervdj.be/hakyll">Hakyll</a>
-                </li>
-                </li>
-            </ul>
-        </div>
-    </div>
+</section>
+
+  <!-- Copyright -->
+      <ul class="copyright">
+          <li><small>&copy; <a href="https://lanyon.getpoole.com">Lanyon Jekyll theme</a></small></li>
+          <li><small>Adapted for Hakyll by Sebastian Graf</small></li>
+          <li><small>Powered by <a href="http://jaspervdj.be/hakyll">Hakyll</a></small></li>
+      </ul>
+</div>
+
 </body>
 
 </html>
