@@ -119,3 +119,5 @@ a.nav-item:focus {
 pre {
   overflow-x: auto;
 }
+
+.katex { font-size: 1em; }

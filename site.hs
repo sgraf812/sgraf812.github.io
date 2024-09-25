@@ -4,7 +4,11 @@ import           Data.Monoid     (mappend, (<>))
 import qualified GHC.IO.Encoding as E
 import           Hakyll          hiding (defaultContext)
 import qualified Hakyll
-import           Hakyll.Web.Sass (sassCompiler)
+import qualified Hakyll.Core.Compiler as Hakyll
+import           Text.Pandoc
+import           Text.Pandoc.Filter
+import           System.Process
+import           Control.Monad.IO.Class
 
 data SubRoute
     = Blog
@@ -18,9 +22,6 @@ activeLink About = "about-active"
 defaultContext :: SubRoute -> Context String
 defaultContext route = mconcat
     [ constField "email" "sgraf1337@gmail.com"
-    , constField "twitter" "sgraf1337"
-    , constField "github" "sgraf812"
-    , constField "reddit" "sgraf812"
     , constField (activeLink route) "true"
     , Hakyll.defaultContext
     ]
@@ -35,11 +36,14 @@ postCtx route = mconcat
 myFeedConfiguration :: FeedConfiguration
 myFeedConfiguration = FeedConfiguration
     { feedTitle       = "fixpt"
-    , feedDescription = "Blog about Haskell and other PL stuff"
+    , feedDescription = "Blog about Haskell, programming lanugage semantics, theory and implementation"
     , feedAuthorName  = "Sebastian Graf"
     , feedAuthorEmail = "sgraf1337@gmail.com"
     , feedRoot        = "https://sgraf812.github.io/"
     }
+
+myPandocCompiler = pandocCompilerWith defaultHakyllReaderOptions defaultHakyllWriterOptions
+  { writerHTMLMathMethod = KaTeX defaultKaTeXURL }
 
 main :: IO ()
 main = do
@@ -52,11 +56,6 @@ main = do
         match "images/*" $ do
             route   idRoute
             compile copyFileCompiler
-
-        match "assets/sass/*" $ do
-            route $ composeRoutes (setExtension "css") (gsubRoute "/sass/" (const "/css/"))
-            let compressCssItem = fmap compressCss
-            compile (compressCssItem <$> sassCompiler)
 
         match "assets/css/*" $ do
             route   idRoute
@@ -72,13 +71,13 @@ main = do
 
         match "about.md" $ do
             route   $ setExtension "html"
-            compile $ pandocCompiler
+            compile $ myPandocCompiler
                 >>= loadAndApplyTemplate "templates/default.html" (defaultContext About)
                 >>= relativizeUrls
 
-        match "blog/*" $ do
+        match "blog/*.md" $ do
             route $ setExtension "html"
-            compile $ pandocCompiler
+            compile $ myPandocCompiler
                 >>= saveSnapshot "content" -- we need metadata for building up the nav
                 >>= loadAndApplyTemplate "templates/post.html"    (postCtx Blog)
                 >>= loadAndApplyTemplate "templates/default.html" (postCtx Blog)
@@ -87,7 +86,7 @@ main = do
         match "index.html" $ do
             route idRoute
             compile $ do
-                posts <- recentFirst =<< loadAllSnapshots "blog/*" "content"
+                posts <- recentFirst =<< loadAllSnapshots "blog/*.md" "content"
                 let indexCtx =
                         listField "posts" (postCtx Blog) (return posts) `mappend`
                         constField "title" "Home"                       `mappend`
@@ -105,5 +104,5 @@ main = do
             compile $ do
                 let feedCtx = postCtx Blog `mappend` bodyField "description"
                 posts <- fmap (take 10) . recentFirst =<<
-                    loadAllSnapshots "blog/*" "content"
+                    loadAllSnapshots "blog/*.md" "content"
                 renderAtom myFeedConfiguration feedCtx posts

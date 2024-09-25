@@ -35,8 +35,9 @@
             haskellPackages.haskell-language-server # you must build it with your ghc to work
             ghcid
             cabal-install
+            pandoc-katex
           ];
-          inputsFrom = map (__getAttr "env") (__attrValues self.packages.${system});
+          inputsFrom = map (__getAttr "env") (__attrValues self.packages.${system}) ++ [ pkgs.pandoc-katex ];
         };
         devShell = self.devShells.${system}.default;
       });

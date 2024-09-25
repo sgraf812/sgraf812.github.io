@@ -19,5 +19,7 @@ executable blog
   ghc-options:         -threaded
   build-depends:       base >= 4.7 && < 5,
                        hakyll,
-                       hakyll-sass
+                       pandoc,
+                       process,
+                       text
 
