@@ -18,22 +18,18 @@
 
   <link rel="alternate" type="application/rss+xml" title="RSS" href="./atom.xml">
 
-  <!-- CSS -->
-  <link rel="stylesheet" href="./assets/css/poole.css" />
-  <link rel="stylesheet" href="./assets/css/syntax.css" />
-  <link rel="stylesheet" href="./assets/css/lanyon.css" />
-  <link rel="stylesheet" href="./assets/css/custom.css" />
-  <link rel="stylesheet" href="./assets/css/pygments.css" />
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/linux-libertine-o">
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/linux-biolinum">
   <script src="https://kit.fontawesome.com/75227a9ab1.js" crossorigin="anonymous"></script>
 
-<!--
-    <link rel="stylesheet" href="/assets/css/main.css" />
-    <noscript>
-        <link rel="stylesheet" href="/assets/css/noscript.css" />
-    </noscript>
--->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+
+  <link rel="stylesheet" href="./assets/css/poole.css" />
+  <link rel="stylesheet" href="./assets/css/syntax.css" />
+  <link rel="stylesheet" href="./assets/css/lanyon.css" />
+  <link rel="stylesheet" href="./assets/css/pygments.css" />
+  <link rel="stylesheet" href="./assets/css/custom.css" />
 </head>
 
 <body>
@@ -64,6 +60,31 @@
 
 <section role="main" class="container content">
   <section class="posts">
+
+    <article class="post">
+    <header>
+        <h1 class="post-title"><a href="./blog/2024-09-23-total-denotational-semantics.html">Total Denotational Semantics</a></h1>
+        <h4 class="post-date">September 23, 2024</h4>
+    </header>
+    <p>Denotational semantics assign meaning to a program (e.g., in untyped lambda
+calculus) by mapping the program into a self-contained domain model in some meta
+language (e.g., Scott domains).
+Traditionally, what is complicated about denotational semantics is not so much
+the function that defines them; rather it is to find a sound mathematical
+definition of the semantic domain, and a general methodology of doing so that
+scales to recursive types and hence general recursion, global mutable state,
+exceptions and concurrency12.
+In this post, I discuss a related issue: I argue that traditional Scott/Strachey
+denotational semantics are partial (in a precise sense), which means that
+
+It is impossible to give a faithful, executable encoding of such a semantics in a programming language, and
+Internal details of the semantic domain inhibit high-level, equational reasonining about programs
+
+After exemplifying the problem, I will discuss total denotational semantics as
+a viable alternative, and how to define one using guarded recursion.
+</p>
+    <a href="./blog/2024-09-23-total-denotational-semantics.html" class="button"><i>Read More ...</i></a>
+    </article>
 
     <article class="post">
     <header>
@@ -116,6 +137,16 @@ It would be convenient if one could choose from the wealth of themes out there, 
       </ul>
 </div>
 
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var mathElements = document.getElementsByClassName("math");
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        katex.render(texText.data, mathElements[i], { displayMode: mathElements[i].classList.contains("display"), throwOnError: true } );
+      }
+    }
+  });
+</script>
 </body>
-
 </html>

@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>fixpt &middot; Total Denotational Semantics</title>
+
+  <link rel="canonical" href="../blog/2024-09-23-total-denotational-semantics.html">
+
+  <link rel="apple-touch-icon-precomposed" sizes="180x180" href="../assets/icon/apple-touch-icon.png">
+  <link rel="shortcut icon" href="../assets/icon/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/icon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../assets/icon/favicon-16x16.png">
+
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="../atom.xml">
+
+  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/linux-libertine-o">
+  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/linux-biolinum">
+  <script src="https://kit.fontawesome.com/75227a9ab1.js" crossorigin="anonymous"></script>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+
+  <link rel="stylesheet" href="../assets/css/poole.css" />
+  <link rel="stylesheet" href="../assets/css/syntax.css" />
+  <link rel="stylesheet" href="../assets/css/lanyon.css" />
+  <link rel="stylesheet" href="../assets/css/pygments.css" />
+  <link rel="stylesheet" href="../assets/css/custom.css" />
+</head>
+
+<body>
+
+<header class="masthead">
+  <nav class="nav-bar" role="navigation">
+    <ul class="nav-items left">
+      <li><a class="nav-item active" href="../">Blog</a>
+      </li>
+      <li><a class="nav-item " href="../about.html">About</a>
+      </li>
+    </ul>
+
+    <ul class="nav-items center container">
+      <li class="masthead-title">
+        <a href="../" title="Home">fixpt.de</a> <small>Sebastian Graf</small>
+      </li>
+    </ul>
+
+    <ul class="nav-items right">
+      <li><a href="https://github.com/sgraf812" class="fa-brands fa-github" rel="nofollow"></a></li>
+      <li><a href="https://x.com/sgraf1337" class="fa-brands fa-x-twitter" rel="nofollow"></a></li>
+      <li><a href="https://mastodon.online/@sgraf" class="fa-brands fa-mastodon" rel="nofollow"></a></li>
+      <li><a href="https://orcid.org/0000-0001-9074-9055" class="fa-brands fa-orcid" rel="nofollow"></a></li>
+    </ul>
+  </nav>
+</header>
+
+<section role="main" class="container content">
+  <div class="post">
+  <h1 class="post-title">Total Denotational Semantics</h1>
+  <span class="post-date">September 23, 2024</span>
+  <p>Denotational semantics assign meaning to a program (e.g., in untyped lambda
+calculus) by mapping the program into a self-contained domain model in some meta
+language (e.g., Scott domains).
+Traditionally, what is complicated about denotational semantics is not so much
+the <em>function</em> that defines them; rather it is to find a sound mathematical
+definition of the <em>semantic domain</em>, and a general methodology of doing so that
+scales to recursive types and hence general recursion, global mutable state,
+exceptions and concurrency<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a><a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>.</p>
+<p>In this post, I discuss a related issue: I argue that traditional Scott/Strachey
+denotational semantics are <em>partial</em> (in a precise sense), which means that</p>
+<ol type="1">
+<li>It is impossible to give a faithful, executable encoding of such a semantics in a programming language, and</li>
+<li>Internal details of the semantic domain inhibit high-level, equational reasonining about programs</li>
+</ol>
+<p>After exemplifying the problem, I will discuss <em>total</em> denotational semantics as
+a viable alternative, and how to define one using guarded recursion.</p>
+<!--more-->
+<p>I do not claim that any of these considerations are novel or indisputable, but I
+hope that they are helpful to some people who</p>
+<ul>
+<li>know how to read Haskell</li>
+<li>like playing around with operational semantics and definitional interpreters</li>
+<li>wonder how denotational semantics can be executed in a programming language</li>
+<li>want to get excited about guarded recursion.</li>
+</ul>
+<p>I hope that this topic becomes more accessible to people with this background
+due to a focus on <em>computation</em>.</p>
+<p>I also hope that this post finds its way to a few semanticists who might provide
+a useful angle or have answers to the conjectures in the later parts of this
+post.</p>
+<p>If you are in a rush and just want to see how a total denotational semantics
+can be defined in Agda, have a look at
+<a href="https://gist.github.com/sgraf812/b9c10d8386a5da7ffe014e9f1dd9bc83">this gist</a>.</p>
+<hr />
+<h1 id="syntax">Syntax</h1>
+<p>We start by defining an AST type for lambda calculus:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode hs"><code class="sourceCode haskell"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> <span class="dt">Name</span> <span class="ot">=</span> <span class="dt">String</span>  <span class="co">-- x ∈ Name</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Exp</span>            <span class="co">-- e</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="ot">=</span> <span class="dt">Var</span> <span class="dt">Name</span>        <span class="co">--   ::= x</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="dt">App</span> <span class="dt">Exp</span> <span class="dt">Exp</span>     <span class="co">--    |  e1 e2</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="dt">Lam</span> <span class="dt">Name</span> <span class="dt">Exp</span>    <span class="co">--    |  λx.e</span></span></code></pre></div>
+<p>I will use the usual short-hand notation (BNF in comments above)</p>
+<p><span class="math display">(λx.x)~(λy.y)</span></p>
+<p>to parse as</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode hs"><code class="sourceCode haskell"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">Lam</span> <span class="st">&quot;x&quot;</span> (<span class="dt">Var</span> <span class="st">&quot;x&quot;</span>) <span class="ot">`App`</span> (<span class="dt">Lam</span> <span class="st">&quot;y&quot;</span> (<span class="dt">Var</span> <span class="st">&quot;y&quot;</span>))</span></code></pre></div>
+<p>and omit the parser that does this transformation.
+I refer to <code>Exp</code> as the <em>object language</em> and to mathematics/Haskell as our
+<em>meta language</em> in which we implement our semantics.</p>
+<h1 id="call-by-name-semantics">Call-by-name Semantics</h1>
+<p>Let us now define a denotational semantics for this language.
+We will first do this in mathematics and later try and turn this definition into Haskell.</p>
+<p>A denotational semantics is a function
+<span class="math inline">\mathcal{I}\llbracket\cdot\rrbracket_{\cdot} : \mathsf{Exp} \to \mathsf{Map}(\mathsf{Name}, D) \to D</span>
+such that <span class="math inline">\mathcal{I}\llbracket e\rrbracket_ρ</span> gives an expression <span class="math inline">e</span> a meaning, or <em>denotation</em>,
+in terms of some semantic domain <span class="math inline">D</span>.
+I pronounce <span class="math inline">\mathcal{I}\llbracket e\rrbracket_ρ</span> as “interpret <span class="math inline">e</span> in environment <span class="math inline">ρ</span>”.
+The environment <span class="math inline">ρ</span> gives meaning to the free variables of <span class="math inline">e</span>,
+by mapping each free variable to its denotation in <span class="math inline">D</span>, and
+<span class="math inline">\mathsf{Map}(\mathsf{Name}, D)</span> is the type of finite maps (think: <code>Data.Map.Map</code>).
+I will write
+<span class="math inline">[x_1\mapsto d_1,...,x_n \mapsto d_n]</span> for a (possibly empty) finite map literal
+that maps name <span class="math inline">x_i</span> to <span class="math inline">d_i</span>,
+<span class="math inline">ρ[x\mapsto d]</span> for inserting the new mapping <span class="math inline">x \mapsto d</span> into the finite map
+<span class="math inline">ρ</span>,
+<span class="math inline">\mathsf{dom}(ρ)</span> for the keys that are present in <span class="math inline">ρ</span>, and
+<span class="math inline">ρ(x)</span> for looking up name <span class="math inline">x</span> in <span class="math inline">ρ</span> (provided it is present).</p>
+<p>With that disclaimer out of the way, here is the denotational semantics:</p>
+<span class="math display">\begin{aligned}
+\mathcal{I}\llbracket x\rrbracket_ρ &amp; = \begin{cases}
+  ρ(x) &amp; x \in \mathsf{dom}(ρ) \\
+  \bot &amp; \text{otherwise}
+  \end{cases} \\
+\mathcal{I}\llbracket λx.e\rrbracket_ρ &amp; = \mathsf{Fun}(f) \text{ where }f(d) = \mathcal{I}\llbracket e\rrbracket_{ρ[x \mapsto d]} \\
+\mathcal{I}\llbracket e_1~e_2\rrbracket_ρ &amp; = \mathit{app}(\mathcal{I}\llbracket e_1\rrbracket_ρ, \mathcal{I}\llbracket e_2\rrbracket_ρ) \\
+  \mathit{app}(d,a) &amp;= \begin{cases}
+  f(a) &amp; \mathsf{Fun}(f) = d \\
+  \bot &amp; \text{otherwise} \\
+  \end{cases}
+\end{aligned}</span>
+<p>This is the standard by-name definition, but I have omitted an important detail.
+I have not defined the semantic domain <span class="math inline">D</span> yet, so I shall do that now.</p>
+<h1 id="scott-domain">Scott Domain</h1>
+<p>To a first approximation, we can think of the Scott domain <span class="math inline">D</span> as the Haskell
+data type</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode hs"><code class="sourceCode haskell"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">D</span>           <span class="co">-- d</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="ot">=</span> <span class="dt">Fun</span> (<span class="dt">D</span> <span class="ot">-&gt;</span> <span class="dt">D</span>) <span class="co">--   ::= Fun (f ∈ D → D)</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="dt">Bot</span>          <span class="co">--    |  ⊥</span></span></code></pre></div>
+<p>Alas, this definition is not <em>well-founded</em>, and thus does not denote a proper
+set (there is no set <span class="math inline">D</span> such that <span class="math inline">D</span> contains functions <span class="math inline">D \to D</span>).
+To make it well-founded, we need to impose an approximation order <span class="math inline">⊑</span> on
+<span class="math inline">D</span> in which <span class="math inline">\bot ⊏ \mathsf{Fun}(f)</span> and restrict the function type <span class="math inline">\to</span> to
+functions that are monotone (<span class="math inline">\simeq</span> more defined input leads to more defined
+output) and even continuous (<span class="math inline">\simeq</span> the output on infinite input is determined
+by the finite prefixes of the input) in <span class="math inline">D</span>.
+It is not important what <em>exactly</em> continuity means at this point, only that it
+is impossible to impose this restriction in the type system of Haskell, let alone
+enforce it as an invariant of <code>D</code>.</p>
+<p>Henceforth, for every function <span class="math inline">f</span> that we stick into the <span class="math inline">\mathsf{Fun}</span>
+constructor, we need to prove that it is continuous, including the function
+<span class="math inline">f(d) = \mathcal{I}\llbracket e\rrbracket_{ρ[x \mapsto d]}</span> in the lambda case of the semantics.
+That in turn means we need to prove that the interpretation function is
+continuous as well, otherwise <span class="math inline">\mathcal{I}\llbracket\cdot\rrbracket</span> is not a well-defined
+mathematical object.
+One can see that this is quite tedious to prove by hand and in practice this
+obligation is often hand-waved away, endangering the well-definedness of
+any concept that builds on <span class="math inline">\mathcal{I}\llbracket\cdot\rrbracket</span>.</p>
+<p>Let me support our understanding of <span class="math inline">\mathcal{I}\llbracket\cdot\rrbracket</span> with a few examples:</p>
+<ul>
+<li><span class="math inline">\mathcal{I}\llbracket λx.x\rrbracket_{[]} = \mathsf{Fun}(d \mapsto d)</span>.
+Note that I write <span class="math inline">d \mapsto d</span> for a lambda expression in math, distinct from the <em>syntax</em> <span class="math inline">(λd.d)</span>.</li>
+<li><span class="math inline">\mathcal{I}\llbracket(λx.x)~(λy.y)\rrbracket_{[]} = \mathit{app}(\mathsf{Fun}(d \mapsto d), \mathcal{I}\llbracket λy.y\rrbracket_{[]}) = \mathcal{I}\llbracket λy.y\rrbracket_{[]} = \mathsf{Fun}(d \mapsto d)</span>.</li>
+<li><span class="math inline">\mathcal{I}\llbracket x~(λy.y)\rrbracket_{[]} = \mathit{app}(\mathcal{I}\llbracket x\rrbracket_{[]}, \mathcal{I}\llbracket λy.y\rrbracket_{[]}) = \mathit{app}(\bot, \mathcal{I}\llbracket λy.y\rrbracket_{[]}) = \bot</span>.
+The bottom element <span class="math inline">\bot</span> is used to indicate a stuck program, in this case because variable <span class="math inline">x</span> is not “in scope” in the empty environment <span class="math inline">[]</span>.</li>
+</ul>
+<h1 id="a-partially-defined-denotational-interpreter">A <em>partially-defined</em> denotational interpreter</h1>
+<p>Now consider the following attempt to make this semantics executable in Haskell:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode hs"><code class="sourceCode haskell"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ot">interp ::</span> <span class="dt">Map</span> <span class="dt">Name</span> <span class="dt">D</span> <span class="ot">-&gt;</span> <span class="dt">Exp</span> <span class="ot">-&gt;</span> <span class="dt">D</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>interp env (<span class="dt">Var</span> x) <span class="ot">=</span> <span class="kw">case</span> Map.lookup x env <span class="kw">of</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Just</span> d  <span class="ot">-&gt;</span> d</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Nothing</span> <span class="ot">-&gt;</span> <span class="dt">Bot</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>interp env (<span class="dt">Lam</span> x e) <span class="ot">=</span> <span class="dt">Fun</span> (\d <span class="ot">-&gt;</span> interp (Map.insert x d env) e)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>interp env (<span class="dt">App</span> e1 e2) <span class="ot">=</span> <span class="kw">case</span> interp env e1 <span class="kw">of</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Fun</span> f <span class="ot">-&gt;</span> f (interp env e2)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  _     <span class="ot">-&gt;</span> <span class="dt">Bot</span></span></code></pre></div>
+<p>I call <code>interp</code> a <em>denotational interpreter</em>, as suggested by
+<a href="https://web.archive.org/web/20100216131108/https://matt.might.net/articles/writing-an-interpreter-substitution-denotational-big-step-small-step/">Matthew Might</a>.
+The single most characteristic feature distinguishing it from a big-step style
+definitional interpreter is the lambda case.
+Note that the denotational interpreter recurses into the lambda body, sticking a
+function of type <code>D -&gt; D</code> into the semantic <code>Fun</code> constructor, whereas a
+big-step style interpreter would simply return the syntax <code>Lam x e</code>.</p>
+<p>Surprisingly, the above translation of <span class="math inline">\mathcal{I}\llbracket\cdot\rrbracket</span> is <em>almost</em> correct!
+It is correct whenever the object program terminates and
+provides the same result as the denotational semantics for all three examples above.</p>
+<p>However, when the object program does <em>not</em> terminate, the denotational
+interpreter above does neither.
+One example of such a program is <span class="math inline">\Omega := (λx.x~x)~(λx.x~x)</span>.
+Running <code>interp</code> on the parse of this program simply loops forever, whereas the
+denotational semantics <span class="math inline">\mathcal{I}\llbracket\cdot\rrbracket</span> assigns the meaning <span class="math inline">\bot</span> to
+<span class="math inline">\Omega</span>, as common wisdom would have it.
+Thus, when viewed as a mathematical function, <code>interp</code> above is only
+partially-defined, or just <em>partial</em>.
+This is in contrast to <span class="math inline">\mathcal{I}\llbracket\cdot\rrbracket</span>, which is a <em>total</em> mathematical
+function, defined on every input.</p>
+<p>(Doesn’t “<span class="math inline">\mathcal{I}\llbracket\cdot\rrbracket</span> is total” contradict the title of this post?
+How can a function such as <span class="math inline">\mathcal{I}\llbracket\cdot\rrbracket</span> return <span class="math inline">\bot</span> but still be considered total?
+Park these thoughts and read on.)</p>
+<p><strong>It appears we cannot find a faithful executable definition of
+<span class="math inline">\mathcal{I}\llbracket\cdot\rrbracket</span> in Haskell</strong>, one which encodes a <em>total</em> mathematical
+function <span class="math inline">\mathcal{I}\llbracket\cdot\rrbracket</span>.
+Which is a pity, because a definition in Haskell greatly helps in prototyping,
+exploring and even formalising such semantics.</p>
+<h1 id="divergence-is-hard-to-grasp-in-scott-domains">Divergence is hard to grasp in Scott domains</h1>
+Actually, who says that <span class="math inline">\mathcal{I}\llbracket\Omega\rrbracket_{[]} = \bot</span>?
+If we just calculate with the definition of <span class="math inline">\Omega</span>, we get
+<span class="math display">\begin{aligned}
+  \mathcal{I}\llbracket\Omega\rrbracket_{[]} &amp;= \mathcal{I}\llbracket(λx.x~x)~(λx.x~x)\rrbracket_{[]} \\
+                      &amp;= \mathit{app}(\mathcal{I}\llbracket λx.x~x\rrbracket_{[]}, \mathcal{I}\llbracket λx. x~x\rrbracket_{[]}) \\
+                      &amp;= \mathit{app}(\mathsf{Fun}(d \mapsto \mathcal{I}\llbracket x~x\rrbracket_{[x\mapsto d]}), \mathcal{I}\llbracket λx. x~x\rrbracket_{[]}) \\
+                      &amp;= \mathcal{I}\llbracket x~x\rrbracket_{[x\mapsto \mathcal{I}\llbracket λx. x~x\rrbracket_{[]}]} \\
+                      &amp;= \mathcal{I}\llbracket(λx.x~x)~(λx.x~x)\rrbracket_{[]} \\
+                      &amp;= \mathcal{I}\llbracket\Omega\rrbracket_{[]} \\
+\end{aligned}</span>
+<p>A circular rewrite!
+This chain of reasoning would hold true regardless of what value we would assign to <span class="math inline">\Omega</span>.
+One way to prove that <span class="math inline">\mathcal{I}\llbracket\Omega\rrbracket_{[]} = \bot</span> is by generalising this statement to <span class="math inline">\mathrm{Y}(\mathit{id})</span>
+and then understanding Example 3.6 of Pitts’
+<a href="https://www.sciencedirect.com/science/article/pii/S0890540196900528">Relational Properties of Domain</a>.
+Needless to say, even such an “obvious” semantic fact such as “<span class="math inline">\Omega</span>
+diverges” does not hold by simple calculation and does not
+even appear to be <a href="https://homepages.inf.ed.ac.uk/gdp/publications/TIM.pdf">true in some (inadequate) semantic domain
+models</a>.
+No wonder that it isn’t possible to compute it in Haskell either; after all,
+computation is just a directed form of equational reasoning.</p>
+<h1 id="total-denotational-interpreter">Total denotational interpreter</h1>
+<p>Haskell is a lazy language.
+As a Haskeller, I eat infinite lists for breakfast and enjoy it, because I know when
+to stop <code>take</code>ing (🥁📀).
+Can we somehow use laziness to encode diverging programs?</p>
+<p>It turns out that, yes, we can!
+We only need to adjust our semantic domain <code>D</code> as follows:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode hs"><code class="sourceCode haskell"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">T</span> a <span class="ot">=</span> <span class="dt">Ret</span> <span class="op">!</span>a <span class="op">|</span> <span class="dt">Step</span> (<span class="dt">T</span> a)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Value</span> <span class="ot">=</span> <span class="dt">Fun</span> (<span class="dt">D</span> <span class="ot">-&gt;</span> <span class="dt">D</span>) <span class="op">|</span> <span class="dt">Stuck</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> <span class="dt">D</span> <span class="ot">=</span> <span class="dt">T</span> <span class="dt">Value</span></span></code></pre></div>
+<p>The coinductive <code>T</code> data type (for “trace”) is a
+<a href="https://arxiv.org/abs/cs/0505037">classic</a>. It forms a monad as follows:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode hs"><code class="sourceCode haskell"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">instance</span> <span class="dt">Monad</span> <span class="dt">T</span> <span class="kw">where</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span> <span class="ot">=</span> <span class="dt">Ret</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Ret</span> a  <span class="op">&gt;&gt;=</span> k <span class="ot">=</span> k a</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Step</span> d <span class="op">&gt;&gt;=</span> k <span class="ot">=</span> <span class="dt">Step</span> (d <span class="op">&gt;&gt;=</span> k)</span></code></pre></div>
+<p>Note that <code>Step</code> is lazy, so we get diverging program “traces” as follows:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode hs"><code class="sourceCode haskell"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ot">diverge ::</span> <span class="dt">D</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>diverge <span class="ot">=</span> <span class="dt">Step</span> diverge</span></code></pre></div>
+<p>It is pretty simple to run a <code>D</code> for a finite amount of time:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode hs"><code class="sourceCode haskell"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ot">takeD ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">T</span> a <span class="ot">-&gt;</span> <span class="dt">Maybe</span> a</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>takeD _ (<span class="dt">Ret</span> a)  <span class="ot">=</span> <span class="dt">Just</span> a</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>takeD <span class="dv">0</span> _        <span class="ot">=</span> <span class="dt">Nothing</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>takeD n (<span class="dt">Step</span> d) <span class="ot">=</span> takeD (n<span class="op">-</span><span class="dv">1</span>) d</span></code></pre></div>
+<p>The use of <code>Step</code> is crucial to stratify diverging computations into an
+infinite layering of finite computations, separated by <code>Step</code> constructors.
+In other words: We use coinduction (well, Löb induction, but close enough) to
+encode diverging programs.</p>
+<p>It is sufficient to delay in a single place: right before we put a denotation
+into the environment.
+(A more common alternative in the literature is to delay in the variable case instead.)
+The new definition becomes</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode hs"><code class="sourceCode haskell"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ot">denot ::</span> <span class="dt">Map</span> <span class="dt">Name</span> <span class="dt">D</span> <span class="ot">-&gt;</span> <span class="dt">Exp</span> <span class="ot">-&gt;</span> <span class="dt">D</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>denot env (<span class="dt">Var</span> x) <span class="ot">=</span> <span class="kw">case</span> Map.lookup x env <span class="kw">of</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Just</span> d  <span class="ot">-&gt;</span> d</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Nothing</span> <span class="ot">-&gt;</span> <span class="dt">Stuck</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>denot env (<span class="dt">Lam</span> x e) <span class="ot">=</span> <span class="dt">Fun</span> (\d <span class="ot">-&gt;</span> denot (Map.insert x (<span class="dt">Step</span> d) env) e)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>denot env (<span class="dt">App</span> e1 e2) <span class="ot">=</span> denot env e1 <span class="op">&gt;&gt;=</span> \<span class="kw">case</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Fun</span> f <span class="ot">-&gt;</span> f (denot env e2)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  _     <span class="ot">-&gt;</span> <span class="fu">return</span> <span class="dt">Stuck</span></span></code></pre></div>
+<p>(A self-contained Haskell playground for <code>denot</code> can be found <a href="https://play.haskell.org/saved/haARY9UX">here</a>.)</p>
+<p>We use monadic bind in the application case to sequence computations.
+Note that if evaluation of <code>e1</code> diverges, the continuation of <code>&gt;&gt;=</code>
+will never be called.</p>
+<p>Using <code>takeD</code>, we may now execute a program for any number of <code>Step</code>s!
+<code>denot</code> thus becomes a <em>total</em> function, defined by mixed induction (for <code>denot</code>)
+and Löb induction (to define the lambda constructor).
+Here are a two more examples:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode hs"><code class="sourceCode haskell"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- |</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co">-- &gt;&gt;&gt; takeD 10000 $ denot Map.empty idid</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="co">-- Just (Fun ...)</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co">-- &gt;&gt;&gt; denot Map.empty idid</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co">-- Step (Ret (Fun ...))</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="ot">idid ::</span> <span class="dt">Exp</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>idid <span class="ot">=</span> <span class="dt">Lam</span> <span class="st">&quot;x&quot;</span> (<span class="dt">Var</span> <span class="st">&quot;x&quot;</span>) <span class="ot">`App`</span> <span class="dt">Lam</span> <span class="st">&quot;y&quot;</span> (<span class="dt">Var</span> <span class="st">&quot;y&quot;</span>)</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="co">-- |</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="co">-- &gt;&gt;&gt; takeD 10000 $ denot Map.empty omega</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="co">-- Nothing</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="ot">omega ::</span> <span class="dt">Exp</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>omega <span class="ot">=</span> <span class="dt">Lam</span> <span class="st">&quot;x&quot;</span> (<span class="dt">Var</span> <span class="st">&quot;x&quot;</span> <span class="ot">`App`</span> <span class="dt">Var</span> <span class="st">&quot;x&quot;</span>) <span class="ot">`App`</span> <span class="dt">Lam</span> <span class="st">&quot;y&quot;</span> (<span class="dt">Var</span> <span class="st">&quot;y&quot;</span> <span class="ot">`App`</span> <span class="dt">Var</span> <span class="st">&quot;y&quot;</span>)</span></code></pre></div>
+<p>If you want to see more of these, I encourage you to read Section 4 of
+our work on <a href="https://arxiv.org/abs/2403.02778">abstracting denotational interpreters</a>.</p>
+<h3 id="why-explicit-stuck">Why explicit <code>Stuck</code>?</h3>
+<p>I renamed <code>Bot</code> to <code>Stuck</code> in the above definition of <code>Value</code> because that is
+what its use now encodes: stuck programs terminate with a <code>Stuck</code> value that
+works like an exception or <a href="https://homepages.inf.ed.ac.uk/wadler/papers/papers-we-love/milner-type-p%20olymorphism.pdf">Milner’s <span class="math inline">\textbf{wrong}</span>
+value</a> (as in “well-typed programs cannot go wrong”).
+This is observably distinct from the <code>diverge</code> denotation for diverging
+programs.
+I <em>could</em> have used <code>diverge</code> instead of <code>return Stuck</code>, however that would be
+a bit misleading.
+(As misleading as in the vanilla denotational semantics, where stuckness and
+divergence are confused.)</p>
+<h1 id="total-denotational-semantics">Total denotational semantics</h1>
+<p>We can interpret the above definition of <code>D</code> straight as a domain equation of
+(flat) Scott domains.
+To do so, we need to adjoin a distinct bottom element <span class="math inline">\bot</span> again, with
+the property that <span class="math inline">\bot ⊏ \mathsf{Fun}(f)</span>, <span class="math inline">\bot ⊏ \mathsf{Stuck}</span> and
+<span class="math inline">\mathsf{Fun}(f)</span> incomparable to <span class="math inline">\mathsf{Stuck}</span>.</p>
+<p>Here is the redefinition of <span class="math inline">\mathcal{I}\llbracket\cdot\rrbracket</span> in terms of the rejigged <span class="math inline">D</span>
+(calling it <span class="math inline">\mathcal{D}\llbracket\cdot\rrbracket</span> for lack of a differentiating name):</p>
+<span class="math display">\begin{aligned}
+\mathcal{D}\llbracket x\rrbracket_ρ &amp; = \begin{cases}
+  ρ(x) &amp; x \in \mathsf{dom}(ρ) \\
+  \mathsf{Ret}(\mathsf{Stuck}) &amp; \text{otherwise}
+  \end{cases} \\
+\mathcal{D}\llbracket λx.e\rrbracket_ρ &amp; = \mathsf{Fun}(f) \text{ where }f(d) = \mathcal{D}\llbracket e\rrbracket_{ρ[x \mapsto \mathsf{Step}(d)]} \\
+\mathcal{D}\llbracket e_1~e_2\rrbracket_ρ &amp; = \mathcal{D}\llbracket e_1\rrbracket_ρ &gt;\!\!&gt;\!\!=v \mapsto \mathit{app}(v, \mathcal{D}\llbracket e_2\rrbracket_ρ) \\
+  \mathit{app}(v,a) &amp;= \begin{cases}
+  f(a) &amp; \mathsf{Fun}(f) = v \\
+  \mathsf{Ret}(\mathsf{Stuck}) &amp; \text{otherwise} \\
+  \end{cases}
+\end{aligned}</span>
+<p>I omitted the definition of the bind operator <span class="math inline">&gt;\!\!&gt;\!\!=</span>, which is exactly as in Haskell.</p>
+<p>It is reasonably simple to see by equational reasoning that <span class="math inline">\Omega</span> diverges:</p>
+<span class="math display">\begin{aligned}
+  \mathcal{D}\llbracket\Omega\rrbracket_{[]} &amp;= \mathcal{D}\llbracket(λx.x~x)~(λx.x~x)\rrbracket_{[]} \\
+                      &amp;= \mathcal{D}\llbracket λx.x~x\rrbracket_{[]} &gt;\!\!&gt;\!\!=v \mapsto \mathit{app}(v, \mathcal{D}\llbracket λx. x~x\rrbracket_{[]}) \\
+                      &amp;= \mathsf{Ret}(\mathsf{Fun}(d \mapsto \mathcal{D}\llbracket x~x\rrbracket_{[x\mapsto \mathsf{Step}(d)]})) &gt;\!\!&gt;\!\!=v \mapsto \mathit{app}(v, \mathcal{D}\llbracket λx. x~x\rrbracket_{[]}) \\
+                      &amp;= \mathcal{D}\llbracket x~x\rrbracket_{[x\mapsto \mathsf{Step}(\mathcal{D}\llbracket λx. x~x\rrbracket_{[]})]} \\
+                      &amp;= \mathcal{D}\llbracket x\rrbracket_{[x\mapsto \mathsf{Step}(\mathcal{D}\llbracket λx. x~x\rrbracket_{[]})]} &gt;\!\!&gt;\!\!=v \mapsto \mathit{app}(v, \mathcal{D}\llbracket x\rrbracket_{[x\mapsto \mathsf{Step}(\mathcal{D}\llbracket λx. x~x\rrbracket_{[]})]}) \\
+                      &amp;= \mathsf{Step}(\mathcal{D}\llbracket λx. x~x\rrbracket_{[]}) &gt;\!\!&gt;\!\!=v \mapsto \mathit{app}(v, \mathsf{Step}(\mathcal{D}\llbracket λx. x~x\rrbracket_{[]})) \\
+                      &amp;= \mathsf{Step}(\mathsf{Ret}(\mathsf{Fun}(d \mapsto \mathcal{D}\llbracket x~x\rrbracket_{[x\mapsto \mathsf{Step}(d)]}))) &gt;\!\!&gt;\!\!=v \mapsto \mathit{app}(v, \mathsf{Step}(\mathcal{D}\llbracket λx. x~x\rrbracket_{[]})) \\
+                      &amp;= \mathsf{Step}(\mathcal{D}\llbracket x~x\rrbracket_{[x\mapsto \mathsf{Step}(\mathsf{Step}(\mathcal{D}\llbracket λx. x~x\rrbracket_{[]}))]}) \\
+                      &amp;= ... \\
+                      &amp;= \mathsf{Step}^n(\mathcal{D}\llbracket x~x\rrbracket_{[x\mapsto \mathsf{Step}^m(\mathcal{D}\llbracket λx. x~x\rrbracket_{[]})]}) \\
+                      &amp;= ... \\
+                      &amp;= \mathsf{Step}^ω = \mathit{diverge} \\
+\end{aligned}</span>
+<p>So that’s already nicer than with <span class="math inline">\mathcal{I}\llbracket\cdot\rrbracket</span>.
+Another key difference to <span class="math inline">\mathcal{I}\llbracket\cdot\rrbracket</span> is that I believe <span class="math inline">\mathcal{D}\llbracket\cdot\rrbracket</span>
+to be total, which implies that it maps total environments to total denotations<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a>.
+(I’m <em>very optimistically</em> omitting a proof here, the novelty of which would
+be unlikely. See the footnote.)</p>
+<p>An element of a domain <span class="math inline">d</span> is <em>total</em><a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a> (or, <em>maximal</em>) if there are no other
+elements <span class="math inline">d'</span> above it, so <span class="math inline">d ⊑ d' \implies d = d'</span>.
+An element <span class="math inline">d</span> is <em>partial</em> if there exists an element <span class="math inline">d'</span> above it, <span class="math inline">d ⊏ d'</span>.</p>
+<p>Clearly, the bottom element <span class="math inline">\bot</span> is as partial as it gets (in a non-trivial
+domain such as <span class="math inline">D</span>).
+There are other <em>finite</em> partial elements such as <span class="math inline">\mathsf{Step}(\bot)</span>, but also
+<em>infinite</em> partial elements such as <span class="math inline">(\bot,(\bot,(\bot,...)))</span> (if our <span class="math inline">D</span> had a
+pair constructor).
+There are <em>finite</em> total elements such as <span class="math inline">\mathsf{Ret}(\mathsf{Stuck})</span> and <em>infinite</em>
+total elements such as <span class="math inline">\mathsf{Step}^ω</span> (corresponding to <code>diverge</code>).</p>
+<p><em>In this precise sense</em>, the vanilla denotational semantics <span class="math inline">\mathcal{I}\llbracket e\rrbracket</span> is a
+<em>partial</em> element of the monotone function space
+<span class="math inline">\mathsf{Map}(\mathsf{Name}, D) \to D</span> (it returns <span class="math inline">\bot</span> in a couple of
+situations) and <span class="math inline">\mathcal{D}\llbracket e\rrbracket</span> is a <em>total</em> element of the monotone function space
+<span class="math inline">\mathsf{Map}(\mathsf{Name}, D) \to D</span>.
+Note how this notion of partiality is different from partially of
+a mathematical function: <span class="math inline">\mathcal{I}\llbracket e\rrbracket</span> is a partial <em>element</em>, but a total <em>function</em>.</p>
+<h3 id="reasoning-and-computing-with-total-elements">Reasoning and computing with total elements</h3>
+<p>The crucial insight is this: <strong>In programming languages, we can only really
+reason equationally about and compute with <em>total</em> elements (finite or
+infinite), but not so easily with <em>partial</em> ones</strong>, because that requires
+reasoning in the actual formal <em>semantics</em> for the programming language (rather
+than reasoning equationally on its <em>syntax</em>).</p>
+<p>It is tiresome that in order to reason about diverging programs in our object
+language <code>Exp</code>, we need to know whether a Haskell program diverges.
+This means we need to know two formal semantics: a small one for <code>Exp</code> and a big
+one for Haskell.</p>
+<h3 id="total-elements-and-guarded-recursion-abstract-away-the-approximation-order">Total elements and guarded recursion abstract away the approximation order</h3>
+<p>There is another advantage to such total denotational semantics:
+Since total elements have no elements above them, the approximation order on
+total elements is <em>discrete</em>, just like we are used from set theory.
+That is, <span class="math inline">\mathsf{Ret}(\mathsf{Stuck})</span> is incomparable to
+<span class="math inline">\mathsf{Step}(\mathsf{Ret}(\mathsf{Stuck}))</span> because both are total elements.
+Thus, one can write total denotational semantics without thinking about
+the approximation order, except in one specific case: encodings of recursion.</p>
+<p>Our denotational semantics encodes recursion in the seemingly paradoxical
+type of the <span class="math inline">\mathsf{Fun}</span> constructor, the field of which is a function taking
+a <span class="math inline">D</span> as argument.
+Such negative recursive occurrences are the bane of semanticists, but they
+have developed a remedy: Guarded type systems.</p>
+<h3 id="guarded-types-erase-to-continuous-definitions">Guarded types erase to continuous definitions</h3>
+<p>In a guarded type system, one would declare that <span class="math inline">\mathsf{Fun}</span> has type
+<span class="math inline">\blacktriangleright D \to D</span>, where <span class="math inline">\blacktriangleright</span> is an applicative functor
+called the <em>later modality</em>, and the type checker would happily accept such
+a type. The later modality can be thought of as a principled way to introduce a
+lazy thunk. As such, we may change the type of <span class="math inline">\mathsf{Step}</span> to <span class="math inline">\blacktriangleright D \to
+D</span>, encoding the lazy nature of <span class="math inline">\mathsf{Step}</span>.
+Do note that the <span class="math inline">d</span> introduced in the lambda case of <span class="math inline">\mathcal{D}\llbracket\cdot\rrbracket</span> has type
+<span class="math inline">\blacktriangleright D</span>, so it is important to give <span class="math inline">\mathsf{Step}</span> this delaying type in
+order for the interpreter to be well-typed and total.</p>
+<p>Et voilà, we have just proven that <span class="math inline">\mathcal{D}\llbracket\cdot\rrbracket</span> is well-defined and total
+without (directly) appealing to any domain theory!</p>
+<p>Presently, only few proof assistants have support for guarded types, but
+Agda is one of them (albeit with rather rudimentary support).
+<a href="https://gist.github.com/sgraf812/b9c10d8386a5da7ffe014e9f1dd9bc83">You can find an Agda encoding of <span class="math inline">\mathcal{D}\llbracket\cdot\rrbracket</span> in
+this gist</a>.
+A self-contained Haskell playground for <code>denot</code> can be found <a href="https://play.haskell.org/saved/haARY9UX">here</a>.</p>
+<h1 id="conclusion">Conclusion</h1>
+<p>This post was kind of a mixed bag of thoughts I had while working on our paper
+<a href="https://arxiv.org/abs/2403.02778">Abstracting Denotational Interpreters</a>,
+where I found it frustrating that I was lacking both the space and the words to
+phrase this article into a proper motivation for the use of guarded type theory.
+The ultimate goal of this post is to lure people who are familiar with
+traditional denotational semantics into learning about total denotational
+semantics and guarded type theory.</p>
+<p>I sincerely believe that guarded type theory is the future for total, executable
+reasoning about what today is often branded coinduction, since it is much more
+applicable than mere coinduction but also different in subtle ways<a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a>.
+(For example, <code>D</code> could not be defined by coinduction because of the negative
+recursion in <code>Fun</code>.)
+Furthermore, it comes with decent (yet still incomplete) axiomatisations in
+proof assistants.</p>
+<p>I have glossed over <em>a lot</em> of related work in this post in order not to break the flow.
+Apologies for that.
+I suggest to have a look at the <a href="https://www.pls-lab.org/en/Guarded_recursion_(type_theory)">PLS lab page on guarded recursion</a>,
+and perhaps start by reading Bob Atkey and Conor McBride’s classic <a href="https://bentnib.org/productive.pdf">Productive
+Coprogramming with Guarded Recursion</a> (which
+does not cover negative recursive occurrences yet).
+One of the most exciting recent results in this area is a formal model for
+<a href="https://arxiv.org/abs/2210.02169">impredicate guarded dependent type theory</a>
+(phew!), which can serve as the justification for an axiomatisation in Rocq and
+Lean, which has <a href="https://arxiv.org/abs/2308.02906">since been used</a> to define
+the equivalent of the Iris higher-order concurrent separation logic framework.</p>
+<section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
+<hr />
+<ol>
+<li id="fn1"><p>The classic text demonstrating these issues is <a href="https://www.sciencedirect.com/science/article/pii/S0890540184710935">A Syntactic Approach to Type Soundness</a>.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>Incredibly smart semanticists such as Lars Birkedal, Jon Sterling and
+others are continually improving the “internal language” (which I think
+means “domain-specific language” to category theorists) for defining such
+complex semantic domains; the subject of synthetic domain theory.
+This <a href="https://www.youtube.com/watch?v=lLvweTSmR40">talk by Jon</a>
+(with questions from 90 years old Dana Scott!) provides a lot of historic
+context and can serve as a technical introduction as well.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>On the monotone function space <span class="math inline">D \to D</span>, a function <span class="math inline">f</span> is only total
+when it is also maximally non-strict – that is, <span class="math inline">f(d)</span> must be the greatest
+lower bound of its upper set in the range of <span class="math inline">f</span>.
+More formally, <span class="math inline">f(d) = ⊓ \{ d' \mid d'∈ \mathsf{rng}(f) \land f(d) ⊑ d' \}</span>.
+For any function <span class="math inline">f</span> defined on total inputs, this can easily be achieved by
+extending it to partial inputs via
+<span class="math inline">f(d) := ⊓ \{ f(d') \mid d' ∈ D \land d \text{ total} \land d ⊑ d' \}</span>.
+Note that any <span class="math inline">f'</span> such that <span class="math inline">f ⊏ f'</span> must overcommit for one input <span class="math inline">d_1</span>
+(so <span class="math inline">f(d_1)⊏f'(d_1)</span>), but then there must exist another <span class="math inline">d_2</span> such that
+<span class="math inline">d_1 ⊏ d_2</span> for which <span class="math inline">f(d_2) \not⊑ f'(d_2)</span>, otherwise <span class="math inline">f'(d_1)</span> would
+be a greater lower bound than <span class="math inline">f(d_1)</span>; contradiction.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p>This is at least the terminology used in
+<a href="https://arxiv.org/abs/1605.05858">Cartwright et al.</a>,
+which I very much enjoyed.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p>For a comparison of induction, coinduction and guarded
+recursion, have a look at Section 16 of the
+<a href="https://iris-project.org/tutorial-pdfs/iris-lecture-notes.pdf">Iris lecture notes</a>.<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section>
+</section>
+<div id="disqus_thread"></div>
+<script>
+  /**
+  *  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+  *  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+  /*
+  var disqus_config = function () {
+  this.page.url = fixpt.de/blog/2024-09-23-total-denotational-semantics.html;  // Replace PAGE_URL with your page's canonical URL variable
+  this.page.identifier = /blog/2024-09-23-total-denotational-semantics.html; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+  };
+  */
+  (function () { // DON'T EDIT BELOW THIS LINE
+    var d = document, s = d.createElement('script');
+    s.src = 'https://fixpt.disqus.com/embed.js';
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+</script>
+<noscript>Please enable JavaScript to view the
+  <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+</noscript>
+
+</section>
+
+  <!-- Copyright -->
+      <ul class="copyright">
+          <li><small>&copy; <a href="https://lanyon.getpoole.com">Lanyon Jekyll theme</a></small></li>
+          <li><small>Adapted for Hakyll by Sebastian Graf</small></li>
+          <li><small>Powered by <a href="http://jaspervdj.be/hakyll">Hakyll</a></small></li>
+      </ul>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var mathElements = document.getElementsByClassName("math");
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        katex.render(texText.data, mathElements[i], { displayMode: mathElements[i].classList.contains("display"), throwOnError: true } );
+      }
+    }
+  });
+</script>
+</body>
+</html>
