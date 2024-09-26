@@ -62,9 +62,9 @@
   <div class="post">
   <h1 class="post-title">Total Denotational Semantics</h1>
   <span class="post-date">September 23, 2024</span>
-  <p>Denotational semantics assign meaning to a program (e.g., in untyped lambda
+  <p>Denotational semantics assign meaning to a program (e.g. in untyped lambda
 calculus) by mapping the program into a self-contained domain model in some meta
-language (e.g., Scott domains).
+language (e.g. Scott domains).
 Traditionally, what is complicated about denotational semantics is not so much
 the <em>function</em> that defines them; rather it is to find a sound mathematical
 definition of the <em>semantic domain</em>, and a general methodology of doing so that
@@ -197,7 +197,7 @@ big-step style interpreter would simply return the syntax <code>Lam x e</code>.<
 It is correct whenever the object program terminates and
 provides the same result as the denotational semantics for all three examples above.</p>
 <p>However, when the object program does <em>not</em> terminate, the denotational
-interpreter above does neither.
+interpreter above does not either.
 One example of such a program is <span class="math inline">\Omega := (λx.x~x)~(λx.x~x)</span>.
 Running <code>interp</code> on the parse of this program simply loops forever, whereas the
 denotational semantics <span class="math inline">\mathcal{I}\llbracket\cdot\rrbracket</span> assigns the meaning <span class="math inline">\bot</span> to
