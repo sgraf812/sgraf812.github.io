@@ -478,6 +478,14 @@ One of the most exciting recent results in this area is a formal model for
 (phew!), which can serve as the justification for an axiomatisation in Rocq and
 Lean, which has [since been used](https://arxiv.org/abs/2308.02906) to define
 the equivalent of the Iris higher-order concurrent separation logic framework.
+The trace type `T` above is a much simplified version of a
+[guarded](https://arxiv.org/abs/2307.08514)
+[interaction tree](https://dl.acm.org/doi/10.1145/3371119).
+Definitional equality on (guarded or Scott) `D` is also a very useful program
+equivalence -- you would still need to appeal to contextual equivalence or a
+custom logical relation for such proofs.
+My interest is in the context of abstract interpretation, where it is sufficient
+to view equivalence modulo the abstraction function $α$.
 
 [^1]: The classic text demonstrating these issues is <a href="https://www.sciencedirect.com/science/article/pii/S0890540184710935">A Syntactic Approach to Type Soundness</a>.
 
