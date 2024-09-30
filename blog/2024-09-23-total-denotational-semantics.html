@@ -62,9 +62,9 @@
   <div class="post">
   <h1 class="post-title">Total Denotational Semantics</h1>
   <span class="post-date">September 23, 2024</span>
-  <p>Denotational semantics assign meaning to a program (e.g. in untyped lambda
+  <p>Denotational semantics assign meaning to a program (e.g., in untyped lambda
 calculus) by mapping the program into a self-contained domain model in some meta
-language (e.g. Scott domains).
+language (e.g., Scott domains).
 Traditionally, what is complicated about denotational semantics is not so much
 the <em>function</em> that defines them; rather it is to find a sound mathematical
 definition of the <em>semantic domain</em>, and a general methodology of doing so that
@@ -197,7 +197,7 @@ big-step style interpreter would simply return the syntax <code>Lam x e</code>.<
 It is correct whenever the object program terminates and
 provides the same result as the denotational semantics for all three examples above.</p>
 <p>However, when the object program does <em>not</em> terminate, the denotational
-interpreter above does not either.
+interpreter above does neither.
 One example of such a program is <span class="math inline">\Omega := (λx.x~x)~(λx.x~x)</span>.
 Running <code>interp</code> on the parse of this program simply loops forever, whereas the
 denotational semantics <span class="math inline">\mathcal{I}\llbracket\cdot\rrbracket</span> assigns the meaning <span class="math inline">\bot</span> to
@@ -433,7 +433,15 @@ One of the most exciting recent results in this area is a formal model for
 <a href="https://arxiv.org/abs/2210.02169">impredicate guarded dependent type theory</a>
 (phew!), which can serve as the justification for an axiomatisation in Rocq and
 Lean, which has <a href="https://arxiv.org/abs/2308.02906">since been used</a> to define
-the equivalent of the Iris higher-order concurrent separation logic framework.</p>
+the equivalent of the Iris higher-order concurrent separation logic framework.
+The trace type <code>T</code> above is a much simplified version of a
+<a href="https://arxiv.org/abs/2307.08514">guarded</a>
+<a href="https://dl.acm.org/doi/10.1145/3371119">interaction tree</a>.
+Definitional equality on (guarded or Scott) <code>D</code> is also a very useful program
+equivalence – you would still need to appeal to contextual equivalence or a
+custom logical relation for such proofs.
+My interest is in the context of abstract interpretation, where it is sufficient
+to view equivalence modulo the abstraction function <span class="math inline">α</span>.</p>
 <section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
 <hr />
 <ol>
