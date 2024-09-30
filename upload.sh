@@ -1,13 +1,16 @@
 #!/bin/sh
-set -e
+set -euxo pipefail
 TOP=$(readlink -f $(dirname $0))
 
 tmp=$(mktemp -d $TOP/dist.XXXXXX)
+
+git push origin hakyll # Ensure we are up to date
 
 nix run . -- rebuild
 cp .gitignore _site/
 commit=$(git rev-parse HEAD)
 git fetch origin master
+git branch --force master origin/master
 git clone . --branch master tmp
 trap 'rm -rf "tmp"' EXIT
 
