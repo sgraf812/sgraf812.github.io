@@ -437,9 +437,10 @@ the equivalent of the Iris higher-order concurrent separation logic framework.
 The trace type <code>T</code> above is a much simplified version of a
 <a href="https://arxiv.org/abs/2307.08514">guarded</a>
 <a href="https://dl.acm.org/doi/10.1145/3371119">interaction tree</a>.
-Definitional equality on (guarded or Scott) <code>D</code> is also a very useful program
-equivalence – you would still need to appeal to contextual equivalence or a
-custom logical relation for such proofs.
+Definitional equality on (guarded or Scott) <code>D</code> is also <em>not</em> a very useful
+program equivalence – you would still need to appeal to the coarser contextual
+equivalence or a custom logical relation for proving interesting properties
+about program rewrites.
 My interest is in the context of abstract interpretation, where it is sufficient
 to view equivalence modulo the abstraction function <span class="math inline">α</span>.</p>
 <section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
