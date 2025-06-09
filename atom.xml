@@ -28,7 +28,7 @@ Or the argument is by some termination measure on the parameters into a well-fou
 In a dependently-typed language, well-founded recursion can actually be expressed in terms of structural recursion; however the technique is subtle enough to think of it as a separate concept.</p>
 <p>In Lean 4, (total) functions can be defined using both structural and well-founded recursion.
 For well-founded recursion, the termination measure and the proof that recursive
-call decrease according to some well-founded relation can be specified through a
+calls decrease according to some well-founded relation can be specified through
 <code>termination_by</code> and <code>decreasing_by</code> sections.
 Check out <a href="https://lean-lang.org/doc/reference/latest/Definitions/Recursive-Definit%20ions/#recursive-definitions">the Lean reference
 manual</a> for details.</p>
@@ -39,8 +39,8 @@ manual</a> for details.</p>
   else if k &gt; n then 0
   else 1 + div (n - k) k
 termination_by n</code></pre>
-<p><code>termination_by</code> infers the well-founded relation as the lexicographic order on naturals, <code>lex_wf Nat.lt_wfRel Nat.lt_wfRel</code>.
-<code>lex_wf</code> is a good choice because the only potential recursive call for an arbitrary <code>n</code> and <code>k</code> is at <code>(n-k)</code> and <code>k</code>, and clearly <code>(n-k) &lt; n</code>, so <code>(n-k, k) &lt; (n, k)</code>.</p>
+<p><code>termination_by</code> infers the well-founded relation as the lexicographic order on naturals, <code>Prod.lex Nat.lt_wfRel Nat.lt_wfRel</code>.
+<code>Prod.lex</code> is a good choice because the only potential recursive call for an arbitrary <code>n</code> and <code>k</code> is at <code>(n-k)</code> and <code>k</code>, and clearly <code>(n-k) &lt; n</code>, so <code>(n-k, k) &lt; (n, k)</code>.</p>
 <p>However, do note that this technique requires <code>termination_by</code> to be smart
 enough to guess the well-founded relation, <em>at the definition site</em>.
 If <code>termination_by</code> is not smart enough, the programmer has to intermingle their
@@ -49,7 +49,7 @@ when trying to prove a property about their code.</p>
 <p>This is only a mild annoyance and barely worth complaining about if it wasn’t for the next point.</p>
 <h3 id="termination_by-only-works-for-total-functions"><code>termination_by</code> only works for total functions</h3>
 <p>There are times when you want to define a function that you know won’t terminate for some inputs.
-Take the collatz sequence and the following definition computing its length:</p>
+Take the collatz sequence for <code>n</code> and the following definition computing its total stopping time:</p>
 <pre class="lean"><code>partial def collatzLen (n : Nat) : Nat :=
   if n = 1 then 1
   else if n % 2 = 0
