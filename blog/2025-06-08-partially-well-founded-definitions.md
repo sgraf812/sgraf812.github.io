@@ -18,7 +18,7 @@ In a dependently-typed language, well-founded recursion can actually be expresse
 
 In Lean 4, (total) functions can be defined using both structural and well-founded recursion.
 For well-founded recursion, the termination measure and the proof that recursive
-call decrease according to some well-founded relation can be specified through a
+calls decrease according to some well-founded relation can be specified through
 `termination_by` and `decreasing_by` sections.
 Check out [the Lean reference
 manual](https://lean-lang.org/doc/reference/latest/Definitions/Recursive-Definit
@@ -36,8 +36,8 @@ def div (n k : Nat) : Nat :=
 termination_by n
 ```
 
-`termination_by` infers the well-founded relation as the lexicographic order on naturals, `lex_wf Nat.lt_wfRel Nat.lt_wfRel`.
-`lex_wf` is a good choice because the only potential recursive call for an arbitrary `n` and `k` is at `(n-k)` and `k`, and clearly `(n-k) < n`, so `(n-k, k) < (n, k)`.
+`termination_by` infers the well-founded relation as the lexicographic order on naturals, `Prod.lex Nat.lt_wfRel Nat.lt_wfRel`.
+`Prod.lex` is a good choice because the only potential recursive call for an arbitrary `n` and `k` is at `(n-k)` and `k`, and clearly `(n-k) < n`, so `(n-k, k) < (n, k)`.
 
 However, do note that this technique requires `termination_by` to be smart
 enough to guess the well-founded relation, *at the definition site*.
@@ -50,7 +50,7 @@ This is only a mild annoyance and barely worth complaining about if it wasn't fo
 ### `termination_by` only works for total functions
 
 There are times when you want to define a function that you know won't terminate for some inputs.
-Take the collatz sequence and the following definition computing its length:
+Take the collatz sequence for `n` and the following definition computing its total stopping time:
 ```lean
 partial def collatzLen (n : Nat) : Nat :=
   if n = 1 then 1
