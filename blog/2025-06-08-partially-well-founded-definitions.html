@@ -84,8 +84,8 @@ manual</a> for details.</p>
   else if k &gt; n then 0
   else 1 + div (n - k) k
 termination_by n</code></pre>
-<p><code>termination_by</code> infers the well-founded relation as the lexicographic order on naturals, <code>Prod.lex Nat.lt_wfRel Nat.lt_wfRel</code>.
-<code>Prod.lex</code> is a good choice because the only potential recursive call for an arbitrary <code>n</code> and <code>k</code> is at <code>(n-k)</code> and <code>k</code>, and clearly <code>(n-k) &lt; n</code>, so <code>(n-k, k) &lt; (n, k)</code>.</p>
+<p><code>termination_by</code> infers the well-founded relation as <code>&lt;</code> on naturals, <code>Nat.lt_wfRel</code>.
+That is a good choice because the only potential recursive call for an arbitrary <code>n</code> and <code>k &gt; 0</code> is at <code>(n-k)</code> and <code>k</code>, and clearly <code>(n-k) &lt; n</code>.</p>
 <p>However, do note that this technique requires <code>termination_by</code> to be smart
 enough to guess the well-founded relation, <em>at the definition site</em>.
 If <code>termination_by</code> is not smart enough, the programmer has to intermingle their
