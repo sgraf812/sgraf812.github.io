@@ -36,8 +36,8 @@ def div (n k : Nat) : Nat :=
 termination_by n
 ```
 
-`termination_by` infers the well-founded relation as the lexicographic order on naturals, `Prod.lex Nat.lt_wfRel Nat.lt_wfRel`.
-`Prod.lex` is a good choice because the only potential recursive call for an arbitrary `n` and `k` is at `(n-k)` and `k`, and clearly `(n-k) < n`, so `(n-k, k) < (n, k)`.
+`termination_by` infers the well-founded relation as `<` on naturals, `Nat.lt_wfRel`.
+That is a good choice because the only potential recursive call for an arbitrary `n` and `k > 0` is at `(n-k)` and `k`, and clearly `(n-k) < n`.
 
 However, do note that this technique requires `termination_by` to be smart
 enough to guess the well-founded relation, *at the definition site*.
