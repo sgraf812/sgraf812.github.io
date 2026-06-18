@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
     <title>fixpt</title>
+    <subtitle><![CDATA[Blog about Haskell, programming lanugage semantics, theory and implementation]]></subtitle>
     <link href="https://sgraf812.github.io//atom.xml" rel="self" />
     <link href="https://sgraf812.github.io/" />
     <id>https://sgraf812.github.io//atom.xml</id>
@@ -10,8 +11,168 @@
         <email>sgraf1337@gmail.com</email>
         
     </author>
-    <updated>2025-06-08T00:00:00Z</updated>
+    <updated>2026-06-18T00:00:00Z</updated>
     <entry>
+    <title>Prop at the top?</title>
+    <link href="https://sgraf812.github.io//blog/2026-06-18-prop-at-the-top.html" />
+    <id>https://sgraf812.github.io//blog/2026-06-18-prop-at-the-top.html</id>
+    <published>2026-06-18T00:00:00Z</published>
+    <updated>2026-06-18T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<p>Propositions as types never troubled me: a proposition is a type, a proof a term
+of it, the Curry-Howard correspondence. In Agda, a total language, it is the
+whole point; in Haskell it is more slogan than tool, scary to newcomers and
+pointless to practitioners, since the language is partial and <code>undefined</code> proves
+anything. The nimbus around it never reaches the subtle part: Lean’s separate
+sort <code>Prop</code>. That took me years to make sense of.</p>
+<!--more-->
+<p><em>This is a quick story I wanted to tell; I used an AI to tell it in a way I find
+coherent.</em></p>
+<p>Lean has <code>Prop</code> because ordinary mathematics needs it. Mathematics is
+impredicative (<code>sup S</code> is defined by quantifying over a collection that already
+contains <code>sup S</code>) and classical (it uses choice without a second thought).
+Neither fits a predicative, computational <code>Type</code>. The first is impredicative;
+the second is non-constructive, since a classical existence proof need not yield
+a witness and choice does not compute. So Lean keeps propositions as types where
+you compute, in <code>Type</code>, and confines the classical, impredicative reasoning to
+<code>Prop</code>. My difficulty was that <code>Prop</code> sits at <code>Sort 0</code>, the very bottom, yet
+behaves like the top. Once I pictured it there, its rules
+made sense, and I will end with why the bottom is nonetheless the right place
+for it.</p>
+<h2 id="the-hierarchy">The hierarchy</h2>
+<p>Lean has one universe hierarchy, <code>Sort</code>. <code>Type u</code> abbreviates <code>Sort (u+1)</code>, and
+<code>Prop</code> is <code>Sort 0</code>:</p>
+<pre><code> ...
+ Sort 2  =  Type 1
+ Sort 1  =  Type 0  =  Type
+ Sort 0  =  Prop</code></pre>
+<p>Each level is typed by the next: <code>Prop : Type 0</code>, <code>Type 0 : Type 1</code>, and so on.
+The type theory is essentially Rocq’s, the Calculus of Inductive Constructions,
+with two differences that matter here. Lean is not cumulative, so a type reaches
+a higher level only by an explicit <code>ULift</code>, never on its own. And Lean’s <code>Prop</code>
+is Rocq’s <code>SProp</code>: its proofs are definitionally equal, which Rocq’s <code>Prop</code> is
+not. Agda has the same <code>Type</code> hierarchy but nothing below <code>Type 0</code>; the bottom
+rung is the whole question.</p>
+<h2 id="what-is-special-about-prop">What is special about Prop</h2>
+<p>Four things set <code>Prop = Sort 0</code> apart from the rest of the hierarchy.</p>
+<ol type="1">
+<li><p><strong>Impredicativity.</strong> The function type <code>(x : A) → B</code>, with <code>A : Sort u</code> and
+<code>B : Sort v</code>, lives at <code>Sort (imax u v)</code>:</p>
+<pre><code>imax u v = max u v   if v &gt; 0
+imax u 0 = 0</code></pre>
+<p>The first line is ordinary: the function type sits at the larger of its
+domain and codomain. The second is special: a function into <code>Prop</code> is a
+<code>Prop</code>, however large its domain. So <code>(α : Type) → P α</code> is a <code>Prop</code> although
+it ranges over every type.</p></li>
+<li><p><strong>Proof irrelevance.</strong> Any two proofs of a proposition are definitionally
+equal; the type checker never looks inside a proof.</p></li>
+<li><p><strong>Restricted elimination.</strong> A proof may be taken apart to prove another
+proposition, but not to produce data in <code>Type</code>. <code>Or</code>, <code>Exists</code> and
+<code>Nonempty</code> are sealed in this way.</p></li>
+<li><p><strong>Smallness.</strong> <code>Prop : Type 0</code>. The universe of propositions is itself a
+small type.</p></li>
+</ol>
+<p>They look unrelated. They are one decision, and the way to see it is to imagine
+<code>Prop</code> at the top of the hierarchy rather than the bottom.</p>
+<h2 id="move-prop-to-the-top">Move Prop to the top</h2>
+<p>The second line of <code>imax</code> is the oddity. Quantifying over a universe normally
+costs a level (in Agda, a function over <code>Set 0</code> lands in <code>Set 1</code>), and
+impredicativity declines to pay. Picture <code>Prop</code> not at the bottom but at the
+very top, above every finite level; call it <code>ω</code>. A function into <code>Prop</code> then
+lands at <code>max(level of A, ω) = ω</code>, plain <code>max</code> with no special case, since <code>ω</code>
+is already above everything. The oddity was an oddity only because <code>Prop</code> sat at
+the bottom, where quantifying over the levels above is a step up; at the top
+there is nothing above to step past.</p>
+<h2 id="why-the-bottom-is-right">Why the bottom is right</h2>
+<p>If <code>Prop</code> behaves like the top, why does Lean put it at the bottom? Because the
+bottom is where it costs nothing. A <code>0</code> never raises a level where universes
+combine (<code>max u 0 = u</code>, <code>imax u 0 = 0</code>), so anything at <code>Sort 0</code> is free.
+<code>∀ (α : Type 5), α = α</code> is a proposition at <code>Sort 0</code>, as small as <code>2 = 2</code>,
+though it quantifies over a universe far above it. And a proof stored as a field
+adds nothing to the level of what stores it: <code>Subtype p</code> carries
+<code>property : p val</code> in <code>Prop</code>, so <code>{ n : Nat // p n }</code> stays at <code>Type 0</code>, the
+level of its data.</p>
+<p>Put <code>Prop</code> at the top instead, and both break: <code>∀ (α : Type 5), α = α</code> becomes
+too high to use as an ordinary type, and <code>{ n : Nat // p n }</code> inherits <code>ω</code> from
+its proof field. You could patch the inductive case with a <code>max</code> that absorbs
+<code>ω</code>, but the special case has only moved: what <code>imax</code> carried for functions, the
+patched <code>max</code> now carries for inductives. Placement does not remove the special
+case, it chooses where it lives. For that trade it is a wash; overall it is not.
+The top adds two complications the bottom is spared: <code>Prop</code>’s own type must be
+stipulated as <code>Sort ω : Type 0</code>, where the bottom reads <code>Prop : Type 0</code> off the
+ordinary successor, and the level language must carry a transfinite <code>ω</code> at all.
+The bottom is the strictly simpler theory, not merely the conventional one, and
+that is why a production language keeps <code>Prop</code> there.</p>
+<h2 id="the-price-of-impredicativity">The price of impredicativity</h2>
+<p>An impredicative universe is dangerous wherever it sits. A universe of real data
+that quantifies over a copy of itself rebuilds the classical paradoxes inside
+the type theory, Girard’s paradox, which is why any relevant universe must be
+predicative, as Agda’s is. (Haskell takes the dangerous option, <code>Type :: Type</code>,
+an inconsistency separate from its partiality.) <code>Prop</code> escapes only because its
+inhabitants are not real data: proof irrelevance leaves a proposition at most
+one inhabitant, and restricted elimination keeps that inhabitant from being
+taken apart.</p>
+<p>Impredicativity and restricted elimination meet on inductives. A proposition
+may carry data of any size:
+<code>Nonempty α</code> holds a value of <code>α : Type u</code> and is still a <code>Prop</code>, which is
+impredicativity once more. But the value cannot be recovered, since
+<code>Nonempty.rec</code> may only target <code>Prop</code>, which is why
+<code>Classical.choice : Nonempty α → α</code> must be assumed rather than defined.
+Carrying the data in is what seals it: a proposition admits recovery into <code>Type</code>
+precisely when it has at most one constructor and that constructor’s fields are
+all proofs, so nothing was lost.</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>proposition</th>
+<th>data recoverable into <code>Type</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>False</code>, <code>True</code>, <code>Eq</code>, <code>Acc</code>, <code>And</code> of props</td>
+<td>yes, there is nothing to recover</td>
+</tr>
+<tr>
+<td><code>Or</code>, <code>Exists</code>, <code>Nonempty</code></td>
+<td>no, recovery would expose erased data</td>
+</tr>
+</tbody>
+</table>
+<h2 id="summary">Summary</h2>
+<p><code>Prop</code> is not four exceptions but one decision: an impredicative universe, kept
+consistent by restricted elimination, with proofs made irrelevant for erasure,
+and made small by sitting at the bottom. It reads as inverted because
+everything <code>Prop</code> does suggests the top, yet Lean files it at the bottom, where
+propositions and proofs cost nothing.</p>
+<p>Homotopy type theory avoids the question: it keeps no privileged <code>Prop</code>, taking
+propositions to be the types with at most one inhabitant, at every level, with
+resizing as an explicit axiom and proof irrelevance a property rather than a
+definitional rule. That is the more uniform foundation, but the subject here is
+a production language, where <code>Prop</code> is a sort and proofs irrelevant by
+construction. For it the top is the right picture and the bottom the right
+implementation, and that the bottom is also the strictly simpler theory, fewer
+special cases and no transfinite levels, is a mark of how carefully Lean is
+engineered.</p>
+<h2 id="further-reading">Further reading</h2>
+<ul>
+<li>Theorem Proving in Lean 4, for the hierarchy and <code>Prop</code> as Lean presents
+them.</li>
+<li>Z. Luo, <em>Computation and Reasoning</em> (the Extended Calculus of
+Constructions), for an impredicative <code>Prop</code> against a predicative hierarchy.</li>
+<li>T. Coquand, “An analysis of Girard’s paradox” (1986), for what fails when the
+top universe is made relevant.</li>
+<li>Gilbert, Cockx, Sozeau, Tabareau, “Definitional Proof-Irrelevance without K”
+(2019), for proof irrelevance and the elimination condition, and for <code>SProp</code>.</li>
+<li>On the predicative alternative, where small propositions are recovered by an
+axiom rather than by impredicativity: Voevodsky’s resizing rules and the
+Homotopy Type Theory book.</li>
+</ul>]]></summary>
+</entry>
+<entry>
     <title>Partially well-founded definitions in Lean</title>
     <link href="https://sgraf812.github.io//blog/2025-06-08-partially-well-founded-definitions.html" />
     <id>https://sgraf812.github.io//blog/2025-06-08-partially-well-founded-definitions.html</id>
