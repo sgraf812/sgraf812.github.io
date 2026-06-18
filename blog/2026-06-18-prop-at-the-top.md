@@ -3,12 +3,12 @@ title: Prop at the top?
 tags: Lean, Agda, Rocq, Haskell, type theory
 ---
 
-Lean's `Prop` confused me for a long time, but not propositions as types. That
-a proposition is a type and a proof a term of it, the Curry-Howard
-correspondence, is the whole point of a total language like Agda, and it gave me
-no trouble. (In Haskell it is more slogan than tool, scary to newcomers and
+Propositions as types never troubled me: a proposition is a type, a proof a term
+of it, the Curry-Howard correspondence. In Agda, a total language, it is the
+whole point; in Haskell it is more slogan than tool, scary to newcomers and
 pointless to practitioners, since the language is partial and `undefined` proves
-anything.) What took me years to place was Lean's separate sort `Prop`.
+anything. The nimbus around it never reaches the subtle part: Lean's separate
+sort `Prop`. That took me years to make sense of.
 
 <!--more-->
 
