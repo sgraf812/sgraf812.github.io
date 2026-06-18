@@ -18,6 +18,9 @@ cp -a _site/. tmp
 git -C tmp add --all
 git -C tmp commit -m "[$(date '+%F %T %Z')] New release in response to commit ${commit}" || true
 git -C tmp push origin master:master
-if [ x"$1" = "x--publish" ]; then
+if [ x"${1:-}" = "x--publish" ]; then
   git push origin master:master
+else
+  echo 'No --publish; no uploading done. Run `git push origin master:master` manually.'
+  exit 1
 fi
